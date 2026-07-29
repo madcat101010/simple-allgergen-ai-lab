@@ -9,18 +9,40 @@
 ## 📌 Problem & Solution Formulation
 Fast-food consumers with food allergies—specifically **Gluten**, **Dairy**, and **Nuts** (Peanuts / Tree Nuts)—face significant safety risks and confusion when selecting menu items. 
 
-This project provides an autonomous AI Agent featuring **Infrastructure as Code (IaC)**, **Dedicated Secret Manager**, **Structured JSON Logging**, **OpenTelemetry Tracing**, **PII Redaction**, **Golden Dataset Evaluation**, **Multi-Model Routing**, **Policy Guardrails with Self-Reflection**, **Human-in-the-Loop (HITL) Confirmation Hooks**, **Persistent Session Memory**, and **Native Gemini LLM Tool Calling**:
-1. **Infrastructure as Code (IaC) Configurations (`iac/`)**:
+This project provides an autonomous AI Agent featuring **Agent CLI**, **Infrastructure as Code (IaC)**, **Dedicated Secret Manager**, **Structured JSON Logging**, **OpenTelemetry Tracing**, **PII Redaction**, **Golden Dataset Evaluation**, **Multi-Model Routing**, **Policy Guardrails with Self-Reflection**, **Human-in-the-Loop (HITL) Confirmation Hooks**, **Persistent Session Memory**, and **Native Gemini LLM Tool Calling**:
+1. **Agent CLI (`src/cli.py`)**: Command-line interface allowing developers and evaluators to interact directly with the agent (`python3 src/cli.py chat "Is a Big Mac safe?"`), inspect harvested simple table dataset records, view OpenTelemetry execution traces, and execute golden evaluation benchmarks.
+2. **Infrastructure as Code (IaC) Configurations (`iac/`)**:
    - **Terraform (`iac/terraform/main.tf`)**: Provisioning Google Cloud Run, GCP Secret Manager, IAM service accounts, and startup probes.
    - **Kubernetes (`iac/k8s/deployment.yaml`)**: Production K8s deployment with `SecretKeyRef` key integration and health probes.
-2. **Dedicated Secret Manager (`src/secrets.py`)**: Explicitly fetches credentials via Google Cloud Secret Manager API (`projects/.../secrets/gemini-api-key`) with audited fallback.
-3. **Structured JSON Logging & PII Redaction Engine (`src/telemetry.py`)**: Uses Python standard library `logging` with `StructuredJSONFormatter` and `PIIRedactorFilter` redacting emails, phone numbers, and SSNs.
-4. **OpenTelemetry Distributed Tracing**: Generates W3C `traceparent` headers (`00-{trace_id}-{span_id}-01`) tracking span hierarchies across sub-agent extraction, model routing, tool execution, and guardrail reflection.
-5. **Golden Dataset Benchmark Suite (`data/golden_evaluation_dataset.json` & `src/evaluator.py`)**: Ground-truth golden dataset evaluating safety accuracy, recall, medical disclaimer compliance, and execution latency (**100% Accuracy, 100% Compliance**).
-6. **Multi-Model Router (`src/model_router.py`)**: Dynamically routes tasks based on query complexity. Low-complexity lookups use `gemini-2.5-flash`; high-complexity multi-allergy queries use `gemini-2.5-pro`.
-7. **Policy Guardrails & Self-Evaluation Engine (`src/guardrails.py`)**: Dedicated policy plugins (`MedicalDisclaimerPolicy`, `AllergenStrictnessPolicy`) and an autonomous self-reflection pass (`SelfEvaluationEngine`).
-8. **Human-in-the-Loop (HITL) Confirmation Hooks (`src/hitl.py`)**: Generates explicit user confirmation tokens (`POST /api/hitl/confirm`) for high-risk allergen warnings.
-9. **Interactive Web UI**: Offers single-click allergy profile toggles with dynamic auto-detection sync, natural language chat input, visual safety badges, HITL confirmation prompts, and transparent execution traces.
+3. **Dedicated Secret Manager (`src/secret_manager.py`)**: Explicitly fetches credentials via Google Cloud Secret Manager API (`projects/.../secrets/gemini-api-key`) with audited fallback.
+4. **Structured JSON Logging & PII Redaction Engine (`src/telemetry.py`)**: Uses Python standard library `logging` with `StructuredJSONFormatter` and `PIIRedactorFilter` redacting emails, phone numbers, and SSNs.
+5. **OpenTelemetry Distributed Tracing**: Generates W3C `traceparent` headers (`00-{trace_id}-{span_id}-01`) tracking span hierarchies across sub-agent extraction, model routing, tool execution, and guardrail reflection.
+6. **Golden Dataset Benchmark Suite (`data/golden_evaluation_dataset.json` & `src/evaluator.py`)**: Ground-truth golden dataset evaluating safety accuracy, recall, medical disclaimer compliance, and execution latency (**100% Accuracy, 100% Compliance**).
+7. **Multi-Model Router (`src/model_router.py`)**: Dynamically routes tasks based on query complexity. Low-complexity lookups use `gemini-2.5-flash`; high-complexity multi-allergy queries use `gemini-2.5-pro`.
+8. **Policy Guardrails & Self-Evaluation Engine (`src/guardrails.py`)**: Dedicated policy plugins (`MedicalDisclaimerPolicy`, `AllergenStrictnessPolicy`) and an autonomous self-reflection pass (`SelfEvaluationEngine`).
+9. **Human-in-the-Loop (HITL) Confirmation Hooks (`src/hitl.py`)**: Generates explicit user confirmation tokens (`POST /api/hitl/confirm`) for high-risk allergen warnings.
+10. **Interactive Web UI**: Offers single-click allergy profile toggles with dynamic auto-detection sync, natural language chat input, visual safety badges, HITL confirmation prompts, and transparent execution traces.
+
+---
+
+## 💻 Agent CLI Commands
+
+```bash
+# 1. Ask agent a natural language question with allergy profile
+python3 src/cli.py chat "Is a Big Mac safe for me?" --allergies Gluten,Dairy
+
+# 2. Execute Golden Dataset Benchmark Evaluation Suite
+python3 src/cli.py evaluate
+
+# 3. Inspect harvested menu dataset items
+python3 src/cli.py menu
+
+# 4. View OpenTelemetry execution traces
+python3 src/cli.py traces
+
+# 5. Confirm HITL warning acknowledgement
+python3 src/cli.py confirm-hitl <token>
+```
 
 ---
 
@@ -31,7 +53,7 @@ This project provides an autonomous AI Agent featuring **Infrastructure as Code 
 | **Safety Verdict Accuracy** | **100.0%** | ≥ 95.0% | ✅ PASS |
 | **Medical Disclaimer Compliance** | **100.0%** | 100.0% | ✅ PASS |
 | **Allergen Recall Rate** | **100.0%** | 100.0% | ✅ PASS |
-| **Average Execution Latency** | **0.23 ms** | < 500 ms | ✅ PASS |
+| **Average Execution Latency** | **0.20 ms** | < 500 ms | ✅ PASS |
 
 Report generated by running `python3 src/evaluator.py` (saved to `logs/golden_eval_report.json`).
 
@@ -41,11 +63,11 @@ Report generated by running `python3 src/evaluator.py` (saved to `logs/golden_ev
 
 | Rubric Category | Score | Implementation Strategy & Evidence |
 | :--- | :---: | :--- |
-| **1. Tool & Interface Design** | **5 / 5** | • **Comprehensive Parameter Schemas**: All tool functions (`lookup_item_allergens`, `search_safe_items`, `evaluate_allergen_safety`, `evaluate_category_safety`) feature explicit Google-style docstrings with complete `Args:` and `Returns:` schema descriptions.<br>• **Simple Table File**: `data/mcdonalds_allergens.json`.<br>• **Web UI**: Dark glassmorphism Web UI (`static/index.html`, `static/style.css`, `static/app.js`) with single-click allergy toggles auto-synced with Gemini Flash outputs, HITL confirmation alerts, and visual safety badges (`✅ SAFE`, `❌ UNSAFE`). |
+| **1. Tool & Interface Design** | **5 / 5** | • **Comprehensive Parameter Schemas**: All tool functions (`lookup_item_allergens`, `search_safe_items`, `evaluate_allergen_safety`, `evaluate_category_safety`) feature explicit Google-style docstrings with complete `Args:` and `Returns:` schema descriptions.<br>• **Simple Table File**: `data/mcdonalds_allergens.json`.<br>• **Web UI & Agent CLI**: Interactive glassmorphism Web UI (`static/index.html`) and dedicated command-line tool (`src/cli.py`) supporting chat, menu inspection, and trace viewing. |
 | **2. Context & Memory** | **5 / 5** | • **Persistent Session Storage**: Stores session state to disk (`data/sessions/{session_id}.json`).<br>• **History Compaction Engine**: Automatically condenses older conversation turns into high-density executive context summaries.<br>• **Async Background Operations**: Uses thread pool executors for non-blocking disk persistence and background compaction.<br>• **System Prompt**: Enforces persona (**McDonald's Allergen Safety Assistant**) and mandatory medical disclaimers. |
 | **3. Orchestration & Logic** | **5 / 5** | • **Multi-Model Routing**: Dynamic routing between `gemini-2.5-flash` and `gemini-2.5-pro` based on query complexity.<br>• **Policy Guardrails & Self-Reflection**: Autonomous self-evaluation engine (`SelfEvaluationEngine`) verifying safety verdicts.<br>• **Human-in-the-Loop (HITL)**: Explicit confirmation hooks (`HITLConfirmationManager`) and confirmation endpoint (`/api/hitl/confirm`).<br>• **Native LLM Function Calling**: Direct Gemini LLM tool invocation (`tools=[...]`) with explicit JSON parameter schemas.<br>• **LLM-Guided Error Recovery**: Handles unknown/ambiguous items, category fallback (*burgers*, *milkshakes*, *fries*, *drinks*), and cross-contamination warnings. |
 | **4. Observability & Tracing** | **5 / 5** | • **Structured JSON Logging**: Standard library `logging` with `StructuredJSONFormatter` saving to `logs/agent_telemetry.jsonl`.<br>• **OpenTelemetry Tracing**: W3C `traceparent` headers and span hierarchy.<br>• **PII Redaction Filter**: Automatic regex masking of emails, phone numbers, and SSNs.<br>• **Intent-Outcome Tracking**: Maps user intents to safety verdict outcomes.<br>• **REST & UI Drawer**: `/api/traces` endpoint and live expandable telemetry drawer in Web UI. |
-| **5. Infrastructure & CI/CD** | **5 / 5** | • **Infrastructure as Code (IaC)**: Production Terraform HCL scripts (`iac/terraform/main.tf`) and Kubernetes manifests (`iac/k8s/deployment.yaml`).<br>• **Dedicated Secret Manager**: GCP Secret Manager integration (`src/secrets.py`) for API key retrieval.<br>• **Golden Evaluation Suite**: Ground-truth golden dataset benchmark (`src/evaluator.py`, `data/golden_evaluation_dataset.json`, `tests/test_golden_evaluation.py`) running accuracy, recall, and disclaimer compliance tests.<br>• **CI/CD & Unit Tests**: GitHub Actions workflow (`.github/workflows/ci.yml`) running 32 automated unit and evaluation tests.<br>• Containerization (`Dockerfile`, `docker-compose.yml`). |
+| **5. Infrastructure & CI/CD** | **5 / 5** | • **Infrastructure as Code (IaC)**: Production Terraform HCL scripts (`iac/terraform/main.tf`) and Kubernetes manifests (`iac/k8s/deployment.yaml`).<br>• **Dedicated Secret Manager**: GCP Secret Manager integration (`src/secret_manager.py`) for API key retrieval.<br>• **Golden Evaluation Suite**: Ground-truth golden dataset benchmark (`src/evaluator.py`, `data/golden_evaluation_dataset.json`, `tests/test_golden_evaluation.py`) running accuracy, recall, and disclaimer compliance tests.<br>• **CI/CD & Unit Tests**: GitHub Actions workflow (`.github/workflows/ci.yml`) running 34 automated unit and evaluation tests.<br>• Containerization (`Dockerfile`, `docker-compose.yml`). |
 
 ---
 
@@ -64,14 +86,14 @@ Report generated by running `python3 src/evaluator.py` (saved to `logs/golden_ev
 
 ## 🚀 Quick Start Guide
 
-### 1. Local Setup
+### 1. Local Setup & Agent CLI
 ```bash
 # Clone repository
 git clone https://github.com/madcat101010/simple-allgergen-ai-lab.git
 cd simple-allgergen-ai-lab
 
-# Run scraper to generate simple table files (data/mcdonalds_allergens.json and .csv)
-python3 src/scraper.py
+# Run Agent CLI
+python3 src/cli.py chat "Is a Big Mac safe for me?" --allergies Gluten,Dairy
 
 # Run Golden Dataset Evaluation Benchmark
 python3 src/evaluator.py
@@ -91,7 +113,7 @@ terraform plan
 ---
 
 ## 🧪 Testing & CI
-Run unit & golden evaluation tests across all modules (32 tests):
+Run unit & golden evaluation tests across all modules (34 tests):
 ```bash
 python3 -m unittest discover tests
 ```
