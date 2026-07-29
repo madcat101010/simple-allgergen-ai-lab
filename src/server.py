@@ -28,13 +28,13 @@ from src.tools import load_allergen_dataset
 from src.telemetry import telemetry
 
 PORT = 8000
-STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
 agent = AllergenAgent()
 
 
 class AllergenHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=STATIC_DIR, **kwargs)
+        # Serve relative to PROJECT_ROOT so /static/style.css and /static/app.js map directly
+        super().__init__(*args, directory=PROJECT_ROOT, **kwargs)
 
     def _send_json(self, data: Any, status_code: int = 200):
         body = json.dumps(data).encode("utf-8")
@@ -65,7 +65,7 @@ class AllergenHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         elif url.path == "/" or url.path == "/index.html":
-            self.path = "/index.html"
+            self.path = "/static/index.html"
             return super().do_GET()
 
         return super().do_GET()
