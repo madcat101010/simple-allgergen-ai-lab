@@ -1,0 +1,381 @@
+[
+  {
+    "item_id": "big-mac",
+    "name": "Big Mac",
+    "category": "Burgers",
+    "url": "https://www.mcdonalds.com/us/en-us/product/big-mac.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk",
+      "Egg",
+      "Soy",
+      "Sesame"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Big Mac Bun (Wheat, Sesame), 100% Beef Patties, Big Mac Sauce (Egg, Soy), Pasteurized Process American Cheese (Milk), Pickle Slices, Shredded Lettuce, Onions."
+  },
+  {
+    "item_id": "quarter-pounder-with-cheese",
+    "name": "Quarter Pounder with Cheese",
+    "category": "Burgers",
+    "url": "https://www.mcdonalds.com/us/en-us/product/quarter-pounder-with-cheese.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk",
+      "Soy",
+      "Sesame"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Quarter Pounder Bun (Wheat, Sesame), 100% Fresh Beef Patty, Pasteurized Process American Cheese (Milk), Ketchup, Mustard, Pickle Slices, Onions."
+  },
+  {
+    "item_id": "hamburger",
+    "name": "Hamburger",
+    "category": "Burgers",
+    "url": "https://www.mcdonalds.com/us/en-us/product/hamburger.html",
+    "allergens": [
+      "Gluten",
+      "Wheat"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": false,
+    "contains_nuts": false,
+    "ingredients_summary": "Regular Bun (Wheat), 100% Beef Patty, Ketchup, Mustard, Pickle Slices, Onions."
+  },
+  {
+    "item_id": "cheeseburger",
+    "name": "Cheeseburger",
+    "category": "Burgers",
+    "url": "https://www.mcdonalds.com/us/en-us/product/cheeseburger.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk",
+      "Soy"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Regular Bun (Wheat), 100% Beef Patty, Pasteurized Process American Cheese (Milk), Ketchup, Mustard, Pickle Slices, Onions."
+  },
+  {
+    "item_id": "double-cheeseburger",
+    "name": "Double Cheeseburger",
+    "category": "Burgers",
+    "url": "https://www.mcdonalds.com/us/en-us/product/double-cheeseburger.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk",
+      "Soy"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Regular Bun (Wheat), Two 100% Beef Patties, Pasteurized Process American Cheese (Milk), Ketchup, Mustard, Pickle Slices, Onions."
+  },
+  {
+    "item_id": "mcdouble",
+    "name": "McDouble",
+    "category": "Burgers",
+    "url": "https://www.mcdonalds.com/us/en-us/product/mcdouble.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk",
+      "Soy"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Regular Bun (Wheat), Two 100% Beef Patties, One Slice Pasteurized Process American Cheese (Milk), Ketchup, Mustard, Pickle Slices, Onions."
+  },
+  {
+    "item_id": "mcchicken",
+    "name": "McChicken",
+    "category": "Chicken & Fish",
+    "url": "https://www.mcdonalds.com/us/en-us/product/mcchicken.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Egg",
+      "Soy"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": false,
+    "contains_nuts": false,
+    "ingredients_summary": "McChicken Patty (Wheat, Soy), Regular Bun (Wheat), Shredded Lettuce, Mayonnaise (Egg)."
+  },
+  {
+    "item_id": "mcnuggets-10-piece",
+    "name": "Chicken McNuggets (10 Piece)",
+    "category": "Chicken & Fish",
+    "url": "https://www.mcdonalds.com/us/en-us/product/chicken-mcnuggets-10-piece.html",
+    "allergens": [
+      "Gluten",
+      "Wheat"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": false,
+    "contains_nuts": false,
+    "ingredients_summary": "White Boneless Chicken, Water, Vegetable Oil, Enriched Bleached Flour (Wheat), Yellow Corn Flour, Spices."
+  },
+  {
+    "item_id": "mccrispy",
+    "name": "McCrispy",
+    "category": "Chicken & Fish",
+    "url": "https://www.mcdonalds.com/us/en-us/product/mccrispy.html",
+    "allergens": [
+      "Gluten",
+      "Wheat"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": false,
+    "contains_nuts": false,
+    "ingredients_summary": "Crispy Chicken Fillet (Wheat), Potato Roll (Wheat), Pickle Slices, Butter Sauce."
+  },
+  {
+    "item_id": "filet-o-fish",
+    "name": "Filet-O-Fish",
+    "category": "Chicken & Fish",
+    "url": "https://www.mcdonalds.com/us/en-us/product/filet-o-fish.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk",
+      "Fish",
+      "Egg",
+      "Soy"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Wild-Caught Pollock Patty (Fish, Wheat), Regular Bun (Wheat), Tartar Sauce (Egg), Half Slice American Cheese (Milk)."
+  },
+  {
+    "item_id": "egg-mcmuffin",
+    "name": "Egg McMuffin",
+    "category": "Breakfast",
+    "url": "https://www.mcdonalds.com/us/en-us/product/egg-mcmuffin.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk",
+      "Egg",
+      "Soy"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "English Muffin (Wheat), Freshly Cracked Egg, Canadian Bacon, American Cheese (Milk), Salted Butter (Milk)."
+  },
+  {
+    "item_id": "sausage-mcmuffin",
+    "name": "Sausage McMuffin",
+    "category": "Breakfast",
+    "url": "https://www.mcdonalds.com/us/en-us/product/sausage-mcmuffin.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk",
+      "Soy"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "English Muffin (Wheat), Sausage Patty, American Cheese (Milk), Salted Butter (Milk)."
+  },
+  {
+    "item_id": "sausage-burrito",
+    "name": "Sausage Burrito",
+    "category": "Breakfast",
+    "url": "https://www.mcdonalds.com/us/en-us/product/sausage-burrito.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk",
+      "Egg",
+      "Soy"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Flour Tortilla (Wheat), Scrambled Egg & Sausage Mix (Egg, Milk), Processed Cheese (Milk)."
+  },
+  {
+    "item_id": "hash-browns",
+    "name": "Hash Browns",
+    "category": "Breakfast",
+    "url": "https://www.mcdonalds.com/us/en-us/product/hash-browns.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Potatoes, Vegetable Oil (with Natural Beef Flavor containing Wheat and Milk derivatives), Salt, Corn Flour."
+  },
+  {
+    "item_id": "fruit-maple-oatmeal",
+    "name": "Fruit & Maple Oatmeal",
+    "category": "Breakfast",
+    "url": "https://www.mcdonalds.com/us/en-us/product/fruit-and-maple-oatmeal.html",
+    "allergens": [
+      "Gluten",
+      "Oats"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": false,
+    "contains_nuts": false,
+    "ingredients_summary": "Whole Grain Oats, Diced Apples, Cranberry Raisin Blend, Light Cream (Milk optional)."
+  },
+  {
+    "item_id": "french-fries-medium",
+    "name": "World Famous Fries",
+    "category": "Fries & Sides",
+    "url": "https://www.mcdonalds.com/us/en-us/product/small-french-fries.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Potatoes, Vegetable Oil (Canola Oil, Corn Oil, Soybean Oil, Hydrogenated Soybean Oil, Natural Beef Flavor [Wheat and Milk Derivatives]), Dextrose, Sodium Acid Pyrophosphate, Salt."
+  },
+  {
+    "item_id": "apple-slices",
+    "name": "Apple Slices",
+    "category": "Fries & Sides",
+    "url": "https://www.mcdonalds.com/us/en-us/product/apple-slices.html",
+    "allergens": [],
+    "contains_gluten": false,
+    "contains_dairy": false,
+    "contains_nuts": false,
+    "ingredients_summary": "Apples, Ascorbic Acid (to maintain color)."
+  },
+  {
+    "item_id": "vanilla-cone",
+    "name": "Vanilla Cone",
+    "category": "Sweets & Treats",
+    "url": "https://www.mcdonalds.com/us/en-us/product/vanilla-cone.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk",
+      "Soy"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Vanilla Reduced Fat Ice Cream (Milk), Cake Cone (Enriched Wheat Flour, Soy Lecithin)."
+  },
+  {
+    "item_id": "baked-apple-pie",
+    "name": "Baked Apple Pie",
+    "category": "Sweets & Treats",
+    "url": "https://www.mcdonalds.com/us/en-us/product/baked-apple-pie.html",
+    "allergens": [
+      "Gluten",
+      "Wheat"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": false,
+    "contains_nuts": false,
+    "ingredients_summary": "Apples, Enriched Flour (Wheat Flour), Sugar, Palm Oil, Water, Modified Food Starch, Cinnamon."
+  },
+  {
+    "item_id": "mcflurry-with-oreo-cookies",
+    "name": "McFlurry with OREO Cookies",
+    "category": "Sweets & Treats",
+    "url": "https://www.mcdonalds.com/us/en-us/product/mcflurry-with-oreo-cookies.html",
+    "allergens": [
+      "Gluten",
+      "Wheat",
+      "Dairy",
+      "Milk",
+      "Soy"
+    ],
+    "contains_gluten": true,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Vanilla Reduced Fat Ice Cream (Milk), OREO Cookie Pieces (Unbleached Enriched Flour [Wheat Flour], Sugar, Palm Oil, Cocoa, High Fructose Corn Syrup, Soy Lecithin)."
+  },
+  {
+    "item_id": "mcflurry-with-m-and-ms",
+    "name": "McFlurry with M&M'S Candies",
+    "category": "Sweets & Treats",
+    "url": "https://www.mcdonalds.com/us/en-us/product/mcflurry-with-m-and-m-candies.html",
+    "allergens": [
+      "Dairy",
+      "Milk",
+      "Soy",
+      "Peanuts (May Contain Traces)",
+      "Tree Nuts (May Contain Traces)"
+    ],
+    "contains_gluten": false,
+    "contains_dairy": true,
+    "contains_nuts": true,
+    "ingredients_summary": "Vanilla Reduced Fat Ice Cream (Milk), M&M'S Milk Chocolate Candies (Milk Chocolate, Sugar, Cocoa Butter, Milk, Soy Lecithin, Peanuts / Tree Nuts warning)."
+  },
+  {
+    "item_id": "coca-cola",
+    "name": "Coca-Cola",
+    "category": "Drinks",
+    "url": "https://www.mcdonalds.com/us/en-us/product/coca-cola-small.html",
+    "allergens": [],
+    "contains_gluten": false,
+    "contains_dairy": false,
+    "contains_nuts": false,
+    "ingredients_summary": "Carbonated Water, High Fructose Corn Syrup, Caramel Color, Phosphoric Acid, Natural Flavors, Caffeine."
+  },
+  {
+    "item_id": "mccafe-latte",
+    "name": "McCaf\u00e9 Latte",
+    "category": "Drinks",
+    "url": "https://www.mcdonalds.com/us/en-us/product/latte-small.html",
+    "allergens": [
+      "Dairy",
+      "Milk"
+    ],
+    "contains_gluten": false,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Whole Milk (or Nonfat Milk), Espresso Water."
+  },
+  {
+    "item_id": "chocolate-shake",
+    "name": "Chocolate Shake",
+    "category": "Drinks",
+    "url": "https://www.mcdonalds.com/us/en-us/product/chocolate-shake-small.html",
+    "allergens": [
+      "Dairy",
+      "Milk"
+    ],
+    "contains_gluten": false,
+    "contains_dairy": true,
+    "contains_nuts": false,
+    "ingredients_summary": "Vanilla Reduced Fat Ice Cream (Milk), Chocolate Shake Syrup, Whipped Light Cream (Milk)."
+  }
+]
