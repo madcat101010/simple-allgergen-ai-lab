@@ -1,0 +1,102 @@
+[
+  {
+    "test_id": "GOLDEN_001",
+    "description": "Big Mac with Gluten allergy should be UNSAFE",
+    "prompt": "Is a Big Mac safe for me?",
+    "user_allergies": ["Gluten"],
+    "expected_status": "UNSAFE",
+    "expected_badge": "❌ UNSAFE",
+    "expected_matched_allergens": ["Gluten / Wheat"],
+    "require_disclaimer": true
+  },
+  {
+    "test_id": "GOLDEN_002",
+    "description": "Big Mac with Dairy allergy should be UNSAFE",
+    "prompt": "Can I eat a Big Mac with a dairy allergy?",
+    "user_allergies": ["Dairy"],
+    "expected_status": "UNSAFE",
+    "expected_badge": "❌ UNSAFE",
+    "expected_matched_allergens": ["Dairy / Milk"],
+    "require_disclaimer": true
+  },
+  {
+    "test_id": "GOLDEN_003",
+    "description": "Coca-Cola with Gluten allergy should be SAFE",
+    "prompt": "Can I drink a Coca-Cola?",
+    "user_allergies": ["Gluten"],
+    "expected_status": "SAFE",
+    "expected_badge": "✅ SAFE",
+    "expected_matched_allergens": [],
+    "require_disclaimer": true
+  },
+  {
+    "test_id": "GOLDEN_004",
+    "description": "Apple Slices with Nut allergy should be SAFE",
+    "prompt": "Are Apple Slices safe for nut allergies?",
+    "user_allergies": ["Nuts"],
+    "expected_status": "SAFE",
+    "expected_badge": "✅ SAFE",
+    "expected_matched_allergens": [],
+    "require_disclaimer": true
+  },
+  {
+    "test_id": "GOLDEN_005",
+    "description": "Vanilla Cone with Dairy allergy should be UNSAFE",
+    "prompt": "Is Vanilla Cone safe for dairy allergy?",
+    "user_allergies": ["Dairy"],
+    "expected_status": "UNSAFE",
+    "expected_badge": "❌ UNSAFE",
+    "expected_matched_allergens": ["Dairy / Milk"],
+    "require_disclaimer": true
+  },
+  {
+    "test_id": "GOLDEN_006",
+    "description": "McFlurry with M&M'S with Nut allergy should be UNSAFE",
+    "prompt": "Can I have a McFlurry with M&M'S Candies if I have a nut allergy?",
+    "user_allergies": ["Nuts"],
+    "expected_status": "UNSAFE",
+    "expected_badge": "❌ UNSAFE",
+    "expected_matched_allergens": ["Peanuts / Tree Nuts"],
+    "require_disclaimer": true
+  },
+  {
+    "test_id": "GOLDEN_007",
+    "description": "Generic burgers query should return CATEGORY breakdown",
+    "prompt": "What burgers can I eat with a dairy allergy?",
+    "user_allergies": ["Dairy"],
+    "expected_status": "CATEGORY",
+    "expected_badge": "ℹ️ CATEGORY BREAKDOWN",
+    "expected_matched_allergens": [],
+    "require_disclaimer": true
+  },
+  {
+    "test_id": "GOLDEN_008",
+    "description": "Generic milkshakes query should return CATEGORY breakdown",
+    "prompt": "Are milkshakes safe for me?",
+    "user_allergies": ["Dairy"],
+    "expected_status": "CATEGORY",
+    "expected_badge": "ℹ️ CATEGORY BREAKDOWN",
+    "expected_matched_allergens": [],
+    "require_disclaimer": true
+  },
+  {
+    "test_id": "GOLDEN_009",
+    "description": "General recommendation query for dairy free items",
+    "prompt": "What can I eat that is safe?",
+    "user_allergies": ["Dairy"],
+    "expected_status": "RECOMMENDATION",
+    "expected_badge": "ℹ️ RECOMMENDATION",
+    "expected_matched_allergens": [],
+    "require_disclaimer": true
+  },
+  {
+    "test_id": "GOLDEN_010",
+    "description": "Non-existent menu item should return UNKNOWN fallback",
+    "prompt": "Can I order a Lobster Roll?",
+    "user_allergies": ["Gluten"],
+    "expected_status": "UNKNOWN",
+    "expected_badge": "❓ UNKNOWN",
+    "expected_matched_allergens": [],
+    "require_disclaimer": true
+  }
+]
