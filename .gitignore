@@ -14,6 +14,12 @@ ENV/
 .coverage
 htmlcov/
 
+# Database & Runtime Memory Storage
+*.db
+*.db-wal
+*.db-shm
+data/sessions/
+
 # Environment Variables
 .env
 
@@ -30,5 +36,3 @@ scratch/
 logs/
 *.log
 allergen_agent_implementation_plan.md
-
-

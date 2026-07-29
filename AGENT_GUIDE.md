@@ -42,12 +42,13 @@ simple-allgergen-ai-lab/
 │   ├── mcdonalds_allergens.json                    # Simple table file (JSON)
 │   ├── mcdonalds_allergens.csv                     # Simple table file (CSV)
 │   ├── golden_evaluation_dataset.json              # Golden benchmark evaluation dataset
-│   └── sessions/                                   # Persistent JSON session memory storage
+│   └── sessions.db                                 # Dedicated SQLite Database & Vector Store
 ├── src/
 │   ├── scraper.py                                  # Data harvester script
 │   ├── tools.py                                    # Typed tools with explicit parameter docstrings
 │   ├── evaluator.py                                # Golden Dataset benchmark runner & metric exporter
-│   ├── memory.py                                   # SessionMemoryManager: persistent storage, history compaction & async background thread pool
+│   ├── db.py                                       # DatabaseSessionStore: SQLite database engine & integrated Vector Store
+│   ├── memory.py                                   # SessionMemoryManager: SQLite database storage, vector search, history compaction & async background thread pool
 │   ├── model_router.py                             # ModelRouter: dynamic task complexity routing (gemini-2.5-flash vs gemini-2.5-pro)
 │   ├── guardrails.py                               # SelfEvaluationEngine: policy plugins & autonomous self-reflection pass
 │   ├── hitl.py                                     # HITLConfirmationManager: Human-in-the-Loop confirmation hooks
@@ -59,7 +60,7 @@ simple-allgergen-ai-lab/
 │   ├── index.html                                  # Web UI layout
 │   ├── style.css                                   # Glassmorphism styling
 │   └── app.js                                      # Frontend logic & auto-sync UI toggles
-└── tests/                                          # Automated unit & benchmark test suite (29 tests)
+└── tests/                                          # Automated unit & benchmark test suite (36 tests)
 ```
 
 ---
@@ -69,6 +70,6 @@ simple-allgergen-ai-lab/
 2. **Multi-Model Routing (`src/model_router.py`)**: Routes low-complexity queries to `gemini-2.5-flash` and high-complexity multi-allergy queries to `gemini-2.5-pro`.
 3. **Policy Guardrails & Self-Evaluation (`src/guardrails.py`)**: `SelfEvaluationEngine` runs an autonomous self-reflection pass over generated responses to verify strict policy compliance.
 4. **Human-in-the-Loop (HITL) Confirmation Hooks (`src/hitl.py`)**: Generates explicit user confirmation tokens (`POST /api/hitl/confirm`) for high-risk allergen warnings.
-5. **Persistent Session Memory & History Compaction (`src/memory.py`)**: Stores session state to disk (`data/sessions/{session_id}.json`) and compacts history asynchronously.
+5. **Dedicated SQLite Database & Vector Store (`src/db.py` & `src/memory.py`)**: Stores session state, turn logs, and vector memory embeddings in a dedicated ACID-compliant SQLite database (`data/sessions.db`) with semantic vector similarity search and async background writes.
 6. **ADK Multi-Agent Architecture**: `AllergyExtractorAgent` (sub-agent) + `McDonaldsAllergenAgent` (orchestrator).
 7. **Medical Disclaimer**: Every response includes an explicit disclaimer about fast-food shared prep areas and cross-contamination.
