@@ -1,0 +1,40 @@
+{
+  "session_id": "eval_GOLDEN_010",
+  "user_allergies": [
+    "Gluten"
+  ],
+  "history": [
+    {
+      "role": "user",
+      "content": "Can I order a Lobster Roll?",
+      "timestamp": 1785349501.261842
+    },
+    {
+      "role": "assistant",
+      "content": "\u2753 UNKNOWN ITEM: I couldn't identify a specific item or menu category in your query ('Can I order a Lobster Roll?'). Please try asking about specific items like 'Big Mac', 'Egg McMuffin', 'World Famous Fries', or generic menu categories like 'burgers', 'shakes', 'breakfast', or ask 'What can I eat?'.\n\n> **Medical Disclaimer**: Warning: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur.",
+      "timestamp": 1785349501.261842
+    },
+    {
+      "role": "user",
+      "content": "Can I order a Lobster Roll?",
+      "timestamp": 1785349616.692069
+    },
+    {
+      "role": "assistant",
+      "content": "\u2753 UNKNOWN ITEM: I couldn't identify a specific item or menu category in your query ('Can I order a Lobster Roll?'). Please try asking about specific items like 'Big Mac', 'Egg McMuffin', 'World Famous Fries', or generic menu categories like 'burgers', 'shakes', 'breakfast', or ask 'What can I eat?'.\n\n> **Medical Disclaimer**: Warning: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur.",
+      "timestamp": 1785349616.692069
+    },
+    {
+      "role": "user",
+      "content": "Can I order a Lobster Roll?",
+      "timestamp": 1785349755.582318
+    },
+    {
+      "role": "assistant",
+      "content": "\u2753 UNKNOWN ITEM: I couldn't identify a specific item or menu category in your query ('Can I order a Lobster Roll?'). Please try asking about specific items like 'Big Mac', 'Egg McMuffin', 'World Famous Fries', or generic menu categories like 'burgers', 'shakes', 'breakfast', or ask 'What can I eat?'.\n\n> **Medical Disclaimer**: Warning: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur.",
+      "timestamp": 1785349755.582318
+    }
+  ],
+  "compacted_summary": "Prior Context: USER: Can I order a Lobster Roll? | ASSISTANT: \u2753 UNKNOWN ITEM: I couldn't identify a specific item or menu category in your query ('Can I order a Lobster Roll?'). Plea || Prior Context: USER: Can I order a Lobster Roll? | ASSISTANT: \u2753 UNKNOWN ITEM: I couldn't identify a specific item or menu category in your query ('Can I order a Lobster Roll?'). Plea || Prior Context: USER: Can I order a Lobster Roll? | ASSISTANT: \u2753 UNKNOWN ITEM: I couldn't identify a specific item or menu category in your query ('Can I order a Lobster Roll?'). Plea",
+  "last_updated": "2026-07-29 14:29:15"
+}

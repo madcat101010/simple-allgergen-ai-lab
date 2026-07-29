@@ -1,0 +1,40 @@
+{
+  "session_id": "eval_GOLDEN_006",
+  "user_allergies": [
+    "Nuts"
+  ],
+  "history": [
+    {
+      "role": "user",
+      "content": "Can I have a McFlurry with M&M'S Candies if I have a nut allergy?",
+      "timestamp": 1785349501.261089
+    },
+    {
+      "role": "assistant",
+      "content": "### \u274c UNSAFE: McFlurry with M&M'S Candies\n\n**Allergy Profile Evaluated**: Nuts  \n**Verdict**: UNSAFE: McFlurry with M&M'S Candies contains Peanuts / Tree Nuts.  \n\n**Item Ingredients**: Vanilla Reduced Fat Ice Cream (Milk), M&M'S Milk Chocolate Candies (Milk Chocolate, Sugar, Cocoa Butter, Milk, Soy Lecithin, Peanuts / Tree Nuts warning).  \n**Allergens Present**: Dairy, Milk, Soy, Peanuts (May Contain Traces), Tree Nuts (May Contain Traces)  \n\n> **Medical Disclaimer**: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur during prep.",
+      "timestamp": 1785349501.261089
+    },
+    {
+      "role": "user",
+      "content": "Can I have a McFlurry with M&M'S Candies if I have a nut allergy?",
+      "timestamp": 1785349616.6911201
+    },
+    {
+      "role": "assistant",
+      "content": "### \u274c UNSAFE: McFlurry with M&M'S Candies\n\n**Allergy Profile Evaluated**: Nuts  \n**Verdict**: UNSAFE: McFlurry with M&M'S Candies contains Peanuts / Tree Nuts.  \n\n**Item Ingredients**: Vanilla Reduced Fat Ice Cream (Milk), M&M'S Milk Chocolate Candies (Milk Chocolate, Sugar, Cocoa Butter, Milk, Soy Lecithin, Peanuts / Tree Nuts warning).  \n**Allergens Present**: Dairy, Milk, Soy, Peanuts (May Contain Traces), Tree Nuts (May Contain Traces)  \n\n> **Medical Disclaimer**: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur during prep.",
+      "timestamp": 1785349616.6911201
+    },
+    {
+      "role": "user",
+      "content": "Can I have a McFlurry with M&M'S Candies if I have a nut allergy?",
+      "timestamp": 1785349755.5814369
+    },
+    {
+      "role": "assistant",
+      "content": "### \u274c UNSAFE: McFlurry with M&M'S Candies\n\n**Allergy Profile Evaluated**: Nuts  \n**Verdict**: UNSAFE: McFlurry with M&M'S Candies contains Peanuts / Tree Nuts.  \n\n**Item Ingredients**: Vanilla Reduced Fat Ice Cream (Milk), M&M'S Milk Chocolate Candies (Milk Chocolate, Sugar, Cocoa Butter, Milk, Soy Lecithin, Peanuts / Tree Nuts warning).  \n**Allergens Present**: Dairy, Milk, Soy, Peanuts (May Contain Traces), Tree Nuts (May Contain Traces)  \n\n> **Medical Disclaimer**: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur during prep.",
+      "timestamp": 1785349755.5814369
+    }
+  ],
+  "compacted_summary": "Prior Context: USER: Can I have a McFlurry with M&M'S Candies if I have a nut allergy? | ASSISTANT: ### \u274c UNSAFE: McFlurry with M&M'S Candies\n\n**Allergy Profile Evaluated**: Nuts  \n**Verdict**: UNSAFE: McFlurry with M&M' || Prior Context: USER: Can I have a McFlurry with M&M'S Candies if I have a nut allergy? | ASSISTANT: ### \u274c UNSAFE: McFlurry with M&M'S Candies\n\n**Allergy Profile Evaluated**: Nuts  \n**Verdict**: UNSAFE: McFlurry with M&M' || Prior Context: USER: Can I have a McFlurry with M&M'S Candies if I have a nut allergy? | ASSISTANT: ### \u274c UNSAFE: McFlurry with M&M'S Candies\n\n**Allergy Profile Evaluated**: Nuts  \n**Verdict**: UNSAFE: McFlurry with M&M'",
+  "last_updated": "2026-07-29 14:29:15"
+}

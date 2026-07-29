@@ -1,0 +1,40 @@
+{
+  "session_id": "eval_GOLDEN_007",
+  "user_allergies": [
+    "Dairy"
+  ],
+  "history": [
+    {
+      "role": "user",
+      "content": "What burgers can I eat with a dairy allergy?",
+      "timestamp": 1785349501.26129
+    },
+    {
+      "role": "assistant",
+      "content": "### \ud83d\udccb Category Safety Breakdown: **Burgers**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Big Mac**: Contains Dairy / Milk.\n- \u274c UNSAFE **Quarter Pounder with Cheese**: Contains Dairy / Milk.\n- \u2705 SAFE **Hamburger**: Safe for your profile.\n- \u274c UNSAFE **Cheeseburger**: Contains Dairy / Milk.\n- \u274c UNSAFE **Double Cheeseburger**: Contains Dairy / Milk.\n- \u274c UNSAFE **McDouble**: Contains Dairy / Milk.\n\n> **Medical Disclaimer**: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur during prep.",
+      "timestamp": 1785349501.26129
+    },
+    {
+      "role": "user",
+      "content": "What burgers can I eat with a dairy allergy?",
+      "timestamp": 1785349616.6913762
+    },
+    {
+      "role": "assistant",
+      "content": "### \ud83d\udccb Category Safety Breakdown: **Burgers**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Big Mac**: Contains Dairy / Milk.\n- \u274c UNSAFE **Quarter Pounder with Cheese**: Contains Dairy / Milk.\n- \u2705 SAFE **Hamburger**: Safe for your profile.\n- \u274c UNSAFE **Cheeseburger**: Contains Dairy / Milk.\n- \u274c UNSAFE **Double Cheeseburger**: Contains Dairy / Milk.\n- \u274c UNSAFE **McDouble**: Contains Dairy / Milk.\n\n> **Medical Disclaimer**: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur during prep.",
+      "timestamp": 1785349616.6913762
+    },
+    {
+      "role": "user",
+      "content": "What burgers can I eat with a dairy allergy?",
+      "timestamp": 1785349755.58165
+    },
+    {
+      "role": "assistant",
+      "content": "### \ud83d\udccb Category Safety Breakdown: **Burgers**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Big Mac**: Contains Dairy / Milk.\n- \u274c UNSAFE **Quarter Pounder with Cheese**: Contains Dairy / Milk.\n- \u2705 SAFE **Hamburger**: Safe for your profile.\n- \u274c UNSAFE **Cheeseburger**: Contains Dairy / Milk.\n- \u274c UNSAFE **Double Cheeseburger**: Contains Dairy / Milk.\n- \u274c UNSAFE **McDouble**: Contains Dairy / Milk.\n\n> **Medical Disclaimer**: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur during prep.",
+      "timestamp": 1785349755.58165
+    }
+  ],
+  "compacted_summary": "Prior Context: USER: What burgers can I eat with a dairy allergy? | ASSISTANT: ### \ud83d\udccb Category Safety Breakdown: **Burgers**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Big Mac**: Contains Dair || Prior Context: USER: What burgers can I eat with a dairy allergy? | ASSISTANT: ### \ud83d\udccb Category Safety Breakdown: **Burgers**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Big Mac**: Contains Dair || Prior Context: USER: What burgers can I eat with a dairy allergy? | ASSISTANT: ### \ud83d\udccb Category Safety Breakdown: **Burgers**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Big Mac**: Contains Dair",
+  "last_updated": "2026-07-29 14:29:15"
+}
