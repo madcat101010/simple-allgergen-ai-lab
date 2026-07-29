@@ -2,7 +2,7 @@
 McDonald's Allergen AI Agent Web Application (FastAPI Backend)
 --------------------------------------------------------------
 Provides REST API endpoints for user prompts, allergen evaluation,
-menu item listings, and static UI serving.
+menu item listings, telemetry traces, and static UI serving.
 """
 
 import os
@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from src.agent import AllergenAgent
 from src.tools import load_allergen_dataset
+from src.telemetry import telemetry
 
 app = FastAPI(
     title="McDonald's Allergen AI Agent",
@@ -62,6 +63,12 @@ def get_menu():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/traces")
+def get_traces():
+    """Returns recent telemetry traces for observability and evaluation."""
+    return {"count": len(telemetry.recent_traces), "traces": telemetry.get_recent_traces()}
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 def process_chat(req: ChatRequest):
     """Processes user prompts against allergen safety tools."""
@@ -74,22 +81,25 @@ def process_chat(req: ChatRequest):
         result = agent.process_query(req.prompt, req.allergies)
         duration_ms = round((time.time() - start_time) * 1000, 2)
 
-        # Build telemetry trace
-        trace = {
-            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "prompt": req.prompt,
-            "user_allergies": req.allergies,
-            "evaluated_item": result.get("evaluated_item", "N/A"),
-            "status": result.get("status"),
-            "execution_time_ms": duration_ms,
-            "tool_calls": [
-                {
-                    "tool": "evaluate_allergen_safety",
-                    "input": {"item": result.get("evaluated_item"), "allergies": req.allergies},
-                    "matched_allergens": result.get("details", {}).get("matched_allergens", [])
-                }
-            ]
-        }
+        # Tool call record
+        tool_calls = [
+            {
+                "tool": "evaluate_allergen_safety",
+                "input": {"item": result.get("evaluated_item"), "allergies": req.allergies},
+                "matched_allergens": result.get("details", {}).get("matched_allergens", [])
+            }
+        ]
+
+        # Record telemetry trace
+        trace = telemetry.record_trace(
+            prompt=req.prompt,
+            user_allergies=req.allergies,
+            status=result["status"],
+            evaluated_item=result.get("evaluated_item"),
+            execution_time_ms=duration_ms,
+            tool_calls=tool_calls,
+            details=result.get("details")
+        )
 
         return ChatResponse(
             prompt=result["prompt"],

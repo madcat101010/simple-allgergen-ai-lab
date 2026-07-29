@@ -27,6 +27,8 @@ htmlcov/
 
 # App & Local Scratch
 scratch/
+logs/
 *.log
 allergen_agent_implementation_plan.md
+
 
