@@ -42,13 +42,17 @@ python3 -m unittest discover tests
 
 | Directory / File | Purpose & Responsibilities |
 | :--- | :--- |
+| `terraform/` | **Infrastructure as Code (Terraform)**: `main.tf`, `variables.tf`, `outputs.tf` provisioning Cloud Run, GCP Secret Manager, IAM service accounts, and startup probes. |
+| `k8s/` | **Infrastructure as Code (Kubernetes)**: `deployment.yaml` defining K8s Deployment, SecretKeyRef integration, resource limits, and readiness/liveness probes. |
 | `data/mcdonalds_allergens.json` | **Simple Table File** containing 24 canonical McDonald's menu items with allergen flags (`contains_gluten`, `contains_dairy`, `contains_nuts`), category, and ingredient summaries. |
 | `data/sessions.db` | **Dedicated SQLite Database & Vector Store** storing session metadata, turn logs, and vector memory embeddings. |
+| `src/cli.py` | **Agent CLI**: Command-line interface for chat interactions, menu dataset viewing, OpenTelemetry trace inspection, golden evaluation, and HITL token confirmation. |
 | `src/scraper.py` | Data harvester script parsing McDonald's full menu items into the simple table file format. |
 | `src/tools.py` | Agent lookup tools (`lookup_item_allergens`, `search_safe_items`, `evaluate_allergen_safety`, `evaluate_category_safety`, `format_tool_error`) featuring Google-style parameter docstrings and explicit LLM path recovery instructions (`recovery_instructions`, `suggested_actions`). Includes `GENERIC_CATEGORY_MAP`. |
 | `src/db.py` | **Dedicated Database Engine (`DatabaseSessionStore`)** implementing SQLite session tables (`sessions`, `session_turns`, `vector_store`) and semantic vector similarity search. |
 | `src/memory.py` | `SessionMemoryManager` managing session state, vector store similarity search, automatic history compaction, and async background operations. |
 | `src/agent.py` | **ADK Architecture**: `AllergyExtractorAgent` (Gemini Flash sub-agent emitting mentioned allergies) & `McDonaldsAllergenAgent` (Primary orchestrator enforcing model routing, policy guardrails, HITL, and medical disclaimers). |
+| `src/secret_manager.py` | **Dedicated Secret Manager**: Fetches credentials via GCP Secret Manager API (`projects/.../secrets/gemini-api-key`) with audited fallback. |
 | `src/telemetry.py` | `TelemetryManager` recording structured trace trajectories, execution latency, and maintaining recent trace history. |
 | `src/server.py` | Standalone zero-dependency HTTP server serving `static/` UI files and REST API routes (`/api/chat`, `/api/hitl/confirm`, `/api/menu`, `/api/traces`, `/api/health`). |
 | `src/app.py` | FastAPI alternative server implementation for production/Docker environments. |

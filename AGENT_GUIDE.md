@@ -38,12 +38,19 @@ simple-allgergen-ai-lab/
 │   └── skills/
 │       └── mcdonalds-allergen-agent/
 │           └── SKILL.md                            # Workspace AI skill definition
+├── terraform/                                      # Infrastructure as Code (IaC) - Terraform
+│   ├── main.tf                                     # GCP Cloud Run, Secret Manager, IAM & Probes
+│   ├── variables.tf                                # Project ID, region & image variables
+│   └── outputs.tf                                  # Cloud Run URI & Secret Manager outputs
+├── k8s/                                            # Infrastructure as Code (IaC) - Kubernetes
+│   └── deployment.yaml                             # Kubernetes Deployment, SecretKeyRef & Service
 ├── data/
 │   ├── mcdonalds_allergens.json                    # Simple table file (JSON)
 │   ├── mcdonalds_allergens.csv                     # Simple table file (CSV)
 │   ├── golden_evaluation_dataset.json              # Golden benchmark evaluation dataset
 │   └── sessions.db                                 # Dedicated SQLite Database & Vector Store
 ├── src/
+│   ├── cli.py                                      # Agent CLI (chat, menu, traces, evaluate, confirm-hitl)
 │   ├── scraper.py                                  # Data harvester script
 │   ├── tools.py                                    # Typed tools with explicit parameter docstrings & structured LLM path recovery instructions
 │   ├── evaluator.py                                # Golden Dataset benchmark runner & metric exporter
@@ -53,6 +60,7 @@ simple-allgergen-ai-lab/
 │   ├── guardrails.py                               # SelfEvaluationEngine: policy plugins & autonomous self-reflection pass
 │   ├── hitl.py                                     # HITLConfirmationManager: Human-in-the-Loop confirmation hooks
 │   ├── agent.py                                    # ADK Architecture: AllergyExtractorAgent & McDonaldsAllergenAgent
+│   ├── secret_manager.py                           # Dedicated Secret Manager for GCP Secret Manager API
 │   ├── telemetry.py                                # Structured trace telemetry
 │   ├── server.py                                   # Zero-dependency HTTP web server
 │   └── app.py                                      # FastAPI web server
@@ -60,7 +68,9 @@ simple-allgergen-ai-lab/
 │   ├── index.html                                  # Web UI layout
 │   ├── style.css                                   # Glassmorphism styling
 │   └── app.js                                      # Frontend logic & auto-sync UI toggles
-└── tests/                                          # Automated unit & benchmark test suite (42 tests)
+├── tests/                                          # Automated unit & benchmark test suite (42 tests)
+├── Dockerfile                                      # Container build configuration
+└── docker-compose.yml                              # Single-command Docker orchestration
 ```
 
 ---
