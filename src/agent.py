@@ -23,7 +23,7 @@ from src.memory import memory_manager, SessionMemoryManager
 from src.model_router import model_router
 from src.guardrails import guardrails
 from src.hitl import hitl_manager
-from src.secrets import secret_manager
+from src.secret_manager import secret_manager
 
 # Optional google-genai SDK import
 try:
