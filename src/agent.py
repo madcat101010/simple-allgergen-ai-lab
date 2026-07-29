@@ -17,6 +17,7 @@ from src.tools import (
     evaluate_allergen_safety,
     evaluate_category_safety,
     load_allergen_dataset,
+    format_tool_error,
     GENERIC_CATEGORY_MAP
 )
 from src.memory import memory_manager, SessionMemoryManager
@@ -118,7 +119,7 @@ class AllergenAgent:
     NATIVE LLM TOOL CALLING & GUARDRAILS INSTRUCTIONS:
     1. ALWAYS call your declared tool functions (`evaluate_allergen_safety`, `evaluate_category_safety`, `search_safe_items`, `lookup_item_allergens`) to retrieve official menu data.
     2. NEVER guess or hallucinate allergen content or ingredients.
-    3. If a tool returns status 'UNKNOWN' (item not found), perform LLM-guided error recovery.
+    3. If a tool returns status 'UNKNOWN', 'UNKNOWN_CATEGORY', or 'found: false', read and follow the returned `recovery_instructions` and `suggested_actions` to correct your execution path (e.g. try lookup_item_allergens with broader terms, evaluate_category_safety, or search_safe_items).
     4. MANDATORY MEDICAL DISCLAIMER: Always include a medical disclaimer in your final response warning that McDonald's kitchens use shared preparation areas, fryers, and equipment where cross-contact may occur.
     """
 
@@ -223,18 +224,31 @@ class AllergenAgent:
 
             if func_name in AVAILABLE_TOOLS:
                 tool_fn = AVAILABLE_TOOLS[func_name]
-                tool_output = tool_fn(**func_args)
+                try:
+                    tool_output = tool_fn(**func_args)
+                except Exception as err:
+                    tool_output = format_tool_error(func_name, str(err), func_args)
 
-                response_text = f"### {tool_output.get('safety_badge', 'ℹ️ VERDICT')}: {tool_output.get('item_name', prompt)}\n\n**Verdict**: {tool_output.get('verdict', '')}\n\n> **Medical Disclaimer**: McDonald's kitchens use shared prep areas. Cross-contact may occur."
+                status = tool_output.get("status", "UNKNOWN")
+                safety_badge = tool_output.get("safety_badge", "❓ UNKNOWN")
+                verdict = tool_output.get("verdict", tool_output.get("message", ""))
+
+                if status in ["UNKNOWN", "UNKNOWN_CATEGORY", "ERROR"]:
+                    recovery_instructions = tool_output.get("recovery_instructions", "")
+                    response_text = f"### {safety_badge}: {tool_output.get('item_name', prompt)}\n\n**Verdict**: {verdict}\n\n**Path Recovery Guidance**: {recovery_instructions}\n\n> **Medical Disclaimer**: McDonald's kitchens use shared prep areas. Cross-contact may occur."
+                else:
+                    response_text = f"### {safety_badge}: {tool_output.get('item_name', prompt)}\n\n**Verdict**: {verdict}\n\n> **Medical Disclaimer**: McDonald's kitchens use shared prep areas. Cross-contact may occur."
 
                 return {
                     "prompt": prompt,
                     "user_allergies": normalized_allergies,
                     "evaluated_item": tool_output.get("item_name", prompt),
-                    "status": tool_output.get("status", "UNKNOWN"),
-                    "safety_badge": tool_output.get("safety_badge", "❓ UNKNOWN"),
+                    "status": status,
+                    "safety_badge": safety_badge,
                     "response": response_text,
                     "details": tool_output,
+                    "recovery_instructions": tool_output.get("recovery_instructions"),
+                    "suggested_actions": tool_output.get("suggested_actions"),
                     "disclaimer": tool_output.get("disclaimer", "Warning: Shared kitchen prep areas."),
                     "llm_function_call": {"name": func_name, "args": func_args}
                 }
@@ -277,7 +291,7 @@ class AllergenAgent:
         for word in words:
             if word in GENERIC_CATEGORY_MAP:
                 cat_eval = evaluate_category_safety(word, normalized_allergies, data_path=self.data_path) if self.data_path else evaluate_category_safety(word, normalized_allergies)
-                if cat_eval:
+                if cat_eval and cat_eval.get("found", True) and "evaluations" in cat_eval:
                     response_text = self._format_category_response(cat_eval, normalized_allergies)
                     badge = "✅ SAFE CATEGORY" if cat_eval["unsafe_count"] == 0 else "ℹ️ CATEGORY BREAKDOWN"
                     return {
@@ -307,6 +321,13 @@ class AllergenAgent:
             }
 
         # Step 4: Error Recovery Fallback
+        recovery = (
+            f"Query '{prompt}' could not be matched to a known McDonald's menu item or food category. "
+            "Path Recovery Instructions for AI Agent:\n"
+            "1. Prompt the customer for a specific menu item name (e.g. 'Big Mac', 'Egg McMuffin', 'World Famous Fries').\n"
+            "2. Try searching by generic category term (e.g. 'burgers', 'breakfast', 'fries', 'drinks').\n"
+            "3. Execute `search_safe_items(user_allergies=...)` to retrieve menu items verified safe for customer's allergy profile."
+        )
         response_text = f"❓ UNKNOWN ITEM: I couldn't identify a specific item or menu category in your query ('{prompt}'). Please try asking about specific items like 'Big Mac', 'Egg McMuffin', 'World Famous Fries', or generic menu categories like 'burgers', 'shakes', 'breakfast', or ask 'What can I eat?'."
         return {
             "prompt": prompt,
@@ -315,6 +336,12 @@ class AllergenAgent:
             "status": "UNKNOWN",
             "safety_badge": "❓ UNKNOWN",
             "response": response_text,
+            "recovery_instructions": recovery,
+            "suggested_actions": [
+                "Prompt customer for exact menu item name",
+                "Execute search_safe_items for allergy profile recommendations",
+                "Execute evaluate_category_safety for menu category analysis"
+            ],
             "disclaimer": "Warning: McDonald's kitchen operations involve shared preparation areas. Cross-contact may occur."
         }
 

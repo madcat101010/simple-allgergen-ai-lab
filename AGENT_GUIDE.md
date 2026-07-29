@@ -22,7 +22,7 @@ python3 src/evaluator.py
 ---
 
 ## 🧪 Running Unit Tests
-Execute the full test suite (29 unit tests across all modules):
+Execute the full test suite (42 unit tests across all modules):
 ```bash
 python3 -m unittest discover tests
 ```
@@ -45,7 +45,7 @@ simple-allgergen-ai-lab/
 │   └── sessions.db                                 # Dedicated SQLite Database & Vector Store
 ├── src/
 │   ├── scraper.py                                  # Data harvester script
-│   ├── tools.py                                    # Typed tools with explicit parameter docstrings
+│   ├── tools.py                                    # Typed tools with explicit parameter docstrings & structured LLM path recovery instructions
 │   ├── evaluator.py                                # Golden Dataset benchmark runner & metric exporter
 │   ├── db.py                                       # DatabaseSessionStore: SQLite database engine & integrated Vector Store
 │   ├── memory.py                                   # SessionMemoryManager: SQLite database storage, vector search, history compaction & async background thread pool
@@ -60,7 +60,7 @@ simple-allgergen-ai-lab/
 │   ├── index.html                                  # Web UI layout
 │   ├── style.css                                   # Glassmorphism styling
 │   └── app.js                                      # Frontend logic & auto-sync UI toggles
-└── tests/                                          # Automated unit & benchmark test suite (36 tests)
+└── tests/                                          # Automated unit & benchmark test suite (42 tests)
 ```
 
 ---
