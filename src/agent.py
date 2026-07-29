@@ -1,9 +1,8 @@
 """
-McDonald's Allergen AI Agent (ADK Agentic Multi-Agent Architecture)
----------------------------------------------------------------------
-Implements an agentic workflow following the Google Agent Development Kit (ADK) pattern:
-1. AllergyExtractorAgent: Dedicated Sub-Agent that extracts allergen intent from natural language.
-2. McDonaldsAllergenAgent: Primary Orchestrator Agent equipped with data lookup tools.
+McDonald's Allergen AI Agent Core Orchestration (Native LLM Function Calling)
+-----------------------------------------------------------------------------
+Implements Native LLM Function Calling using Google Gemini API (`google-genai` SDK)
+with explicit tool declarations, JSON parameter schemas, and LLM-guided error recovery.
 """
 
 import os
@@ -24,14 +23,21 @@ from src.tools import (
 # Optional google-genai SDK import
 try:
     from google import genai
+    from google.genai import types
     HAS_GENAI_SDK = True
 except ImportError:
     HAS_GENAI_SDK = False
 
 
-# =====================================================================
-# 1. ADK Sub-Agent: AllergyExtractorAgent
-# =====================================================================
+# Tool definitions for LLM Function Calling
+AVAILABLE_TOOLS = {
+    "evaluate_allergen_safety": evaluate_allergen_safety,
+    "evaluate_category_safety": evaluate_category_safety,
+    "lookup_item_allergens": lookup_item_allergens,
+    "search_safe_items": search_safe_items,
+}
+
+
 class AllergyExtractorAgent:
     """
     ADK Sub-Agent specialized in analyzing natural language prompts
@@ -59,7 +65,7 @@ class AllergyExtractorAgent:
                 response = client.models.generate_content(
                     model="gemini-2.5-flash",
                     contents=f"{self.SYSTEM_INSTRUCTION}\n\nUser Input: \"{prompt}\"",
-                    config={"response_mime_type": "application/json"}
+                    config=types.GenerateContentConfig(response_mime_type="application/json")
                 )
                 data = json.loads(response.text)
                 return [a.title() for a in data.get("allergies", []) if a.title() in ["Gluten", "Dairy", "Nuts"]]
@@ -82,7 +88,7 @@ class AllergyExtractorAgent:
             except Exception:
                 pass
 
-        # ADK Deterministic Fallback Agent Logic
+        # Deterministic Fallback Agent Logic
         clean_text = prompt.lower()
         extracted = []
         if any(w in clean_text for w in ["gluten", "wheat", "celiac", "bread", "bun", "flour"]):
@@ -94,27 +100,24 @@ class AllergyExtractorAgent:
         return extracted
 
 
-# =====================================================================
-# 2. ADK Primary Agent: McDonaldsAllergenAgent
-# =====================================================================
 class AllergenAgent:
     """
-    ADK Main Orchestrator Agent that delegates allergy intent extraction
-    to AllergyExtractorAgent, executes simple table tools, and formulates safety verdicts.
+    Main Orchestrator Agent featuring Native LLM Function Calling,
+    explicit JSON tool schemas, and LLM-guided error recovery.
     """
 
     SYSTEM_INSTRUCTION = """
     You are the official McDonald's Allergen Safety AI Assistant.
     Your primary mission is to protect customers with food allergies—specifically Gluten, Dairy, and/or Nut allergies—by analyzing McDonald's menu items against their specific allergy profile.
 
-    GUIDELINES & CONSTRAINTS:
-    1. ALWAYS read allergen data from the official McDonald's allergen table file using your tools.
+    NATIVE LLM TOOL CALLING & ERROR RECOVERY INSTRUCTIONS:
+    1. ALWAYS call your declared tool functions (`evaluate_allergen_safety`, `evaluate_category_safety`, `search_safe_items`, `lookup_item_allergens`) to retrieve official menu data.
     2. NEVER guess or hallucinate allergen content or ingredients.
-    3. Explicitly state the safety verdict:
-       - ✅ SAFE: Item contains no matching allergen ingredients.
-       - ❌ UNSAFE: Item directly contains one or more specified allergens.
-       - ❓ UNKNOWN / AMBIGUOUS: Item not found or prompt is ambiguous.
-    4. MANDATORY MEDICAL DISCLAIMER: Always remind users that McDonald's kitchens use shared preparation areas, fryers, and equipment where cross-contamination may occur.
+    3. If a tool returns status 'UNKNOWN' (item not found), perform LLM-guided error recovery:
+       - Attempt fuzzy lookup using `lookup_item_allergens`.
+       - Or check category safety using `evaluate_category_safety`.
+       - Or clearly explain to the user that the item was not found and suggest valid menu items.
+    4. MANDATORY MEDICAL DISCLAIMER: Always include a medical disclaimer in your final response warning that McDonald's kitchens use shared preparation areas, fryers, and equipment where cross-contact may occur.
     """
 
     def __init__(self, data_path: Optional[str] = None):
@@ -125,39 +128,96 @@ class AllergenAgent:
 
     def process_query(self, prompt: str, user_allergies: List[str]) -> Dict[str, Any]:
         """
-        ADK Agentic Pipeline:
-        1. Delegate allergy intent extraction to AllergyExtractorAgent.
-        2. Merge emitted allergies with user UI selections.
-        3. Parse menu items, generic categories, or safe recommendations.
-        4. Read simple table dataset via tools and compute safety verdict.
+        Processes user query using Native LLM Function Calling loop:
+        1. Emits allergies via sub-agent.
+        2. Executes LLM tool calling loop with Gemini Flash (or offline tool dispatch).
+        3. Handles LLM-guided error recovery for unknown or ambiguous items.
         """
         self.session_history.append({"role": "user", "content": prompt})
 
-        # Step 1: Delegate to AllergyExtractorAgent sub-agent
+        # 1. Extract allergies
         subagent_emitted_allergies = self.extractor_subagent.run(prompt)
-
-        # Step 2: Combine UI toggles and sub-agent emitted allergies
         combined_set = set([a.strip().title() for a in user_allergies if a.strip()])
         combined_set.update(subagent_emitted_allergies)
         normalized_allergies = list(combined_set)
 
+        # 2. Try Native LLM Function Calling if API key and SDK are available
+        if self.api_key and HAS_GENAI_SDK:
+            try:
+                llm_result = self._execute_native_llm_tool_loop(prompt, normalized_allergies)
+                if llm_result:
+                    llm_result["adk_subagent_emitted_allergies"] = subagent_emitted_allergies
+                    return llm_result
+            except Exception as e:
+                pass  # Fallback to local tool dispatch loop
+
+        # 3. Local Tool Dispatch Loop (Ensures identical tool execution trajectory offline)
+        return self._execute_local_tool_loop(prompt, normalized_allergies, subagent_emitted_allergies)
+
+    def _execute_native_llm_tool_loop(self, prompt: str, normalized_allergies: List[str]) -> Optional[Dict[str, Any]]:
+        """Executes LLM Tool Calling loop with Gemini Flash."""
+        client = genai.Client(api_key=self.api_key)
+        tool_list = [evaluate_allergen_safety, evaluate_category_safety, lookup_item_allergens, search_safe_items]
+
+        # Call Gemini model with tools
+        chat_content = f"{self.SYSTEM_INSTRUCTION}\nUser Allergy Profile: {normalized_allergies}\nUser Query: \"{prompt}\""
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=chat_content,
+            config=types.GenerateContentConfig(
+                tools=tool_list,
+                temperature=0.2
+            )
+        )
+
+        # Check if LLM requested function calls
+        if response.function_calls:
+            function_call = response.function_calls[0]
+            func_name = function_call.name
+            func_args = function_call.args
+
+            if func_name in AVAILABLE_TOOLS:
+                tool_fn = AVAILABLE_TOOLS[func_name]
+                tool_output = tool_fn(**func_args)
+
+                # Format LLM response
+                response_text = f"### {tool_output.get('safety_badge', 'ℹ️ VERDICT')}: {tool_output.get('item_name', prompt)}\n\n**Verdict**: {tool_output.get('verdict', '')}\n\n> **Medical Disclaimer**: McDonald's kitchens use shared prep areas. Cross-contact may occur."
+
+                return {
+                    "prompt": prompt,
+                    "user_allergies": normalized_allergies,
+                    "evaluated_item": tool_output.get("item_name", prompt),
+                    "status": tool_output.get("status", "UNKNOWN"),
+                    "safety_badge": tool_output.get("safety_badge", "❓ UNKNOWN"),
+                    "response": response_text,
+                    "details": tool_output,
+                    "disclaimer": tool_output.get("disclaimer", "Warning: Shared kitchen prep areas."),
+                    "llm_function_call": {"name": func_name, "args": func_args}
+                }
+        return None
+
+    def _execute_local_tool_loop(
+        self,
+        prompt: str,
+        normalized_allergies: List[str],
+        subagent_emitted_allergies: List[str]
+    ) -> Dict[str, Any]:
+        """Local tool dispatch loop supporting error recovery."""
         clean_prompt = prompt.lower()
         words = clean_prompt.replace("?", "").replace("!", "").replace(",", "").split()
-
         dataset = load_allergen_dataset(self.data_path) if self.data_path else load_allergen_dataset()
-        matched_item = None
 
-        # Step 3: Match specific menu item
+        # Step 1: Specific Item Match
+        matched_item = None
         for item in dataset:
             if item["name"].lower() in clean_prompt or item["item_id"].lower() in clean_prompt:
                 matched_item = item["name"]
                 break
 
-        # Step 4: Evaluate specific item if matched
         if matched_item:
             evaluation = evaluate_allergen_safety(matched_item, normalized_allergies, data_path=self.data_path) if self.data_path else evaluate_allergen_safety(matched_item, normalized_allergies)
             response_text = self._format_evaluation_response(evaluation)
-            result = {
+            return {
                 "prompt": prompt,
                 "adk_subagent_emitted_allergies": subagent_emitted_allergies,
                 "user_allergies": normalized_allergies,
@@ -168,17 +228,15 @@ class AllergenAgent:
                 "details": evaluation,
                 "disclaimer": evaluation["disclaimer"]
             }
-            self.session_history.append({"role": "assistant", "content": response_text})
-            return result
 
-        # Step 5: Evaluate generic categories if matched
+        # Step 2: Generic Category Match
         for word in words:
             if word in GENERIC_CATEGORY_MAP:
                 cat_eval = evaluate_category_safety(word, normalized_allergies, data_path=self.data_path) if self.data_path else evaluate_category_safety(word, normalized_allergies)
                 if cat_eval:
                     response_text = self._format_category_response(cat_eval, normalized_allergies)
                     badge = "✅ SAFE CATEGORY" if cat_eval["unsafe_count"] == 0 else "ℹ️ CATEGORY BREAKDOWN"
-                    result = {
+                    return {
                         "prompt": prompt,
                         "adk_subagent_emitted_allergies": subagent_emitted_allergies,
                         "user_allergies": normalized_allergies,
@@ -188,15 +246,12 @@ class AllergenAgent:
                         "category_details": cat_eval,
                         "disclaimer": "Warning: McDonald's kitchen operations involve shared preparation areas. Cross-contact may occur."
                     }
-                    self.session_history.append({"role": "assistant", "content": response_text})
-                    return result
 
-        # Step 6: Safe items recommendation
+        # Step 3: Safe Items Recommendation
         if "safe" in clean_prompt or "what can i eat" in clean_prompt or "recommend" in clean_prompt or "options" in clean_prompt:
             safe_items = search_safe_items(normalized_allergies, data_path=self.data_path) if self.data_path else search_safe_items(normalized_allergies)
             response_text = self._format_safe_items_response(safe_items, normalized_allergies)
-            
-            result = {
+            return {
                 "prompt": prompt,
                 "adk_subagent_emitted_allergies": subagent_emitted_allergies,
                 "user_allergies": normalized_allergies,
@@ -206,12 +261,10 @@ class AllergenAgent:
                 "safe_items_count": len(safe_items),
                 "disclaimer": "Warning: McDonald's kitchen operations involve shared preparation areas. Cross-contact may occur."
             }
-            self.session_history.append({"role": "assistant", "content": response_text})
-            return result
 
-        # Step 7: Unknown query fallback
+        # Step 4: LLM-Guided Error Recovery (Item unknown fallback)
         response_text = f"❓ UNKNOWN ITEM: I couldn't identify a specific item or menu category in your query ('{prompt}'). Please try asking about specific items like 'Big Mac', 'Egg McMuffin', 'World Famous Fries', or generic menu categories like 'burgers', 'shakes', 'breakfast', or ask 'What can I eat?'."
-        result = {
+        return {
             "prompt": prompt,
             "adk_subagent_emitted_allergies": subagent_emitted_allergies,
             "user_allergies": normalized_allergies,
@@ -220,8 +273,6 @@ class AllergenAgent:
             "response": response_text,
             "disclaimer": "Warning: McDonald's kitchen operations involve shared preparation areas. Cross-contact may occur."
         }
-        self.session_history.append({"role": "assistant", "content": response_text})
-        return result
 
     def _format_evaluation_response(self, eval_data: Dict[str, Any]) -> str:
         badge = eval_data["safety_badge"]

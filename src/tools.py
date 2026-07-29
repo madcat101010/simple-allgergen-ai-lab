@@ -1,8 +1,8 @@
 """
-McDonald's Allergen Agent Tools
--------------------------------
-Provides structured data lookup and safety evaluation functions for reading
-the simple table file (`data/mcdonalds_allergens.json`).
+McDonald's Allergen Agent Tools & Function Schema Definitions
+--------------------------------------------------------------
+Provides typed tool functions and explicit JSON schema parameter definitions
+for reading the simple table file (`data/mcdonalds_allergens.json`).
 """
 
 import json
@@ -59,7 +59,18 @@ GENERIC_CATEGORY_MAP = {
 
 
 def load_allergen_dataset(data_path: str = DEFAULT_DATA_PATH) -> List[Dict[str, Any]]:
-    """Loads the McDonald's simple allergen table file into memory."""
+    """
+    Loads and caches the McDonald's simple allergen table dataset into memory.
+
+    Args:
+        data_path (str, optional): Path to the mcdonalds_allergens.json file. Defaults to DEFAULT_DATA_PATH.
+
+    Returns:
+        List[Dict[str, Any]]: List of dictionary records containing menu item allergen profiles.
+
+    Raises:
+        FileNotFoundError: If the specified data_path file does not exist on disk.
+    """
     global _DATASET_CACHE
     if _DATASET_CACHE is not None and data_path == DEFAULT_DATA_PATH:
         return _DATASET_CACHE
@@ -77,8 +88,20 @@ def load_allergen_dataset(data_path: str = DEFAULT_DATA_PATH) -> List[Dict[str, 
 
 def lookup_item_allergens(item_name: str, data_path: str = DEFAULT_DATA_PATH) -> Dict[str, Any]:
     """
-    Look up a McDonald's menu item by name in the simple allergen table file.
-    Performs case-insensitive fuzzy/exact matching.
+    Looks up a McDonald's menu item by name or partial query in the simple allergen table file.
+
+    Args:
+        item_name (str): Name or partial query of the menu item (e.g., 'Big Mac', 'fries', 'McChicken').
+            Case-insensitive exact and substring matches are performed.
+        data_path (str, optional): Path to the JSON allergen table dataset. Defaults to DEFAULT_DATA_PATH.
+
+    Returns:
+        Dict[str, Any]: Dictionary containing lookup results:
+            - found (bool): True if item was located, False otherwise.
+            - match_type (str): 'exact', 'fuzzy', 'ambiguous', or None.
+            - item (dict, optional): Full menu item record with keys [item_id, name, category, url, allergens, contains_gluten, contains_dairy, contains_nuts, ingredients_summary].
+            - matches (list, optional): List of matching item names if query is ambiguous.
+            - message (str, optional): Explanation string if item was not found.
     """
     dataset = load_allergen_dataset(data_path)
     clean_query = item_name.strip().lower()
@@ -117,8 +140,21 @@ def evaluate_category_safety(
     data_path: str = DEFAULT_DATA_PATH
 ) -> Optional[Dict[str, Any]]:
     """
-    Evaluates all items within a matched category or generic term (e.g., 'burgers', 'shakes', 'breakfast').
-    Returns structured safety results for each item in that category.
+    Evaluates safety for all menu items within a generic food category (e.g., 'burgers', 'shakes', 'breakfast', 'fries').
+
+    Args:
+        category_or_generic (str): Category term (e.g., 'burgers', 'shakes', 'breakfast', 'drinks', 'sides').
+        user_allergies (List[str]): Active list of user food allergies (e.g., ['Gluten', 'Dairy', 'Nuts']).
+        data_path (str, optional): Path to the JSON allergen table dataset. Defaults to DEFAULT_DATA_PATH.
+
+    Returns:
+        Optional[Dict[str, Any]]: Category safety breakdown containing:
+            - category (str): Matched canonical category name (e.g., 'Burgers').
+            - total_items (int): Total count of items evaluated in category.
+            - safe_count (int): Count of safe items.
+            - unsafe_count (int): Count of unsafe items.
+            - evaluations (List[dict]): Detailed safety evaluation dictionary per item in category.
+            Returns None if category term cannot be resolved.
     """
     dataset = load_allergen_dataset(data_path)
     clean_term = category_or_generic.strip().lower()
@@ -166,8 +202,15 @@ def search_safe_items(
     data_path: str = DEFAULT_DATA_PATH
 ) -> List[Dict[str, Any]]:
     """
-    Filters menu items that are safe for the user's allergen profile.
-    Considers 'gluten', 'dairy', and 'nuts' (peanuts/tree nuts).
+    Filters the McDonald's simple table dataset to return items safe for a specified user allergy profile.
+
+    Args:
+        user_allergies (List[str]): Customer food allergy profile (e.g., ['Gluten', 'Dairy', 'Nuts']).
+        category (str, optional): Optional category filter (e.g., 'Breakfast', 'Burgers'). Defaults to None.
+        data_path (str, optional): Path to JSON dataset file. Defaults to DEFAULT_DATA_PATH.
+
+    Returns:
+        List[Dict[str, Any]]: List of safe menu item records containing [item_id, name, category, allergens, ingredients_summary].
     """
     dataset = load_allergen_dataset(data_path)
     clean_allergies = [a.strip().lower() for a in user_allergies]
@@ -207,9 +250,25 @@ def evaluate_allergen_safety(
     data_path: str = DEFAULT_DATA_PATH
 ) -> Dict[str, Any]:
     """
-    Evaluates whether a specific menu item is safe for a user given their list of allergies.
-    Returns a detailed verdict containing status (SAFE, UNSAFE, WARNING), matched allergens,
-    and cross-contamination notes.
+    Evaluates whether a specific McDonald's menu item is safe for a customer given their active allergy profile.
+
+    Args:
+        item_name (str): Name of the menu item (e.g., 'Big Mac', 'Quarter Pounder with Cheese', 'World Famous Fries').
+        user_allergies (List[str]): List of customer allergies to evaluate (supported: 'Gluten', 'Dairy', 'Nuts').
+        data_path (str, optional): Path to the mcdonalds_allergens.json dataset file. Defaults to DEFAULT_DATA_PATH.
+
+    Returns:
+        Dict[str, Any]: Detailed safety verdict dictionary containing:
+            - status (str): 'SAFE', 'UNSAFE', or 'UNKNOWN'
+            - safety_badge (str): Display badge ('✅ SAFE', '❌ UNSAFE', '❓ UNKNOWN')
+            - item_name (str): Canonical item name
+            - category (str): Category of item
+            - user_allergies_evaluated (List[str]): Customer allergies checked
+            - matched_allergens (List[str]): Allergens in item matching user profile
+            - all_allergens_in_item (List[str]): Complete allergen list
+            - ingredients_summary (str): Ingredient breakdown
+            - verdict (str): Human-readable verdict statement
+            - disclaimer (str): Cross-contamination medical warning
     """
     lookup = lookup_item_allergens(item_name, data_path)
     if not lookup["found"]:
