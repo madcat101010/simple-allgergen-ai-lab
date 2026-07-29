@@ -1,11 +1,8 @@
 """
-McDonald's Allergen AI Agent Core Orchestration (Multi-Model + Guardrails + HITL + Memory)
------------------------------------------------------------------------------------------
-Implements:
-1. Multi-Model Routing: Dynamic selection between gemini-2.5-flash and gemini-2.5-pro based on query complexity.
-2. Policy Guardrails & Self-Evaluation: Dedicated policy plugins & self-reflection engine.
-3. Human-in-the-Loop (HITL): Explicit confirmation hooks for high-risk allergen warnings.
-4. Persistent Memory & History Compaction: Async background thread memory persistence.
+McDonald's Allergen AI Agent Core Orchestration
+------------------------------------------------
+Implements Native LLM Function Calling, Dedicated Secret Manager, Multi-Model Routing,
+Policy Guardrails with Self-Evaluation, HITL Confirmation Hooks, and Persistent Memory.
 """
 
 import os
@@ -26,6 +23,7 @@ from src.memory import memory_manager, SessionMemoryManager
 from src.model_router import model_router
 from src.guardrails import guardrails
 from src.hitl import hitl_manager
+from src.secrets import secret_manager
 
 # Optional google-genai SDK import
 try:
@@ -62,7 +60,7 @@ class AllergyExtractorAgent:
     """
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
+        self.api_key = api_key or secret_manager.get_secret("gemini-api-key")
 
     def run(self, prompt: str) -> List[str]:
         """Executes the sub-agent loop to emit extracted allergies."""
@@ -109,7 +107,7 @@ class AllergyExtractorAgent:
 
 class AllergenAgent:
     """
-    Main Orchestrator Agent featuring Multi-Model Routing, Native LLM Function Calling,
+    Main Orchestrator Agent featuring Dedicated Secret Manager, Multi-Model Routing, Native LLM Function Calling,
     Policy Guardrails with Self-Reflection, HITL Confirmation Hooks, and Persistent Memory.
     """
 
@@ -126,7 +124,7 @@ class AllergenAgent:
 
     def __init__(self, data_path: Optional[str] = None):
         self.data_path = data_path
-        self.api_key = os.environ.get("GEMINI_API_KEY", "")
+        self.api_key = secret_manager.get_secret("gemini-api-key")
         self.extractor_subagent = AllergyExtractorAgent(api_key=self.api_key)
         self.memory = memory_manager
         self.router = model_router
@@ -148,11 +146,9 @@ class AllergenAgent:
         5. Computes Human-in-the-Loop (HITL) confirmation hooks.
         6. Appends to persistent session storage asynchronously.
         """
-        # Step 1: Multi-Model Routing based on complexity
         model_selection = self.router.select_model(prompt, user_allergies)
         selected_model = model_selection["model_name"]
 
-        # Step 2: Persistent session loading & sub-agent intent extraction
         session_state = self.memory.load_session(session_id)
         compacted_summary = session_state.get("compacted_summary", "")
 
@@ -161,7 +157,6 @@ class AllergenAgent:
         combined_set.update(subagent_emitted_allergies)
         normalized_allergies = list(combined_set)
 
-        # Step 3: LLM Tool Calling or local tool dispatch
         result = None
         if self.api_key and HAS_GENAI_SDK:
             try:
@@ -176,10 +171,8 @@ class AllergenAgent:
 
         result["model_routing"] = model_selection
 
-        # Step 4: Policy Guardrails & Self-Evaluation Engine Pass
         result = self.guardrails.evaluate_and_reflect(result)
 
-        # Step 5: Evaluate Human-in-the-Loop (HITL) Confirmation Requirement
         matched_allergens = result.get("details", {}).get("matched_allergens", [])
         hitl_data = self.hitl.evaluate_hitl_requirement(
             status=result["status"],
@@ -189,7 +182,6 @@ class AllergenAgent:
         )
         result["hitl_confirmation"] = hitl_data
 
-        # Step 6: Async background memory persistence & history compaction
         self.memory.append_turn_and_compact(
             session_id=session_id,
             user_prompt=prompt,
