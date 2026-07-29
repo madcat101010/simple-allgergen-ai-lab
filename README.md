@@ -9,15 +9,16 @@
 ## 📌 Problem & Solution Formulation
 Fast-food consumers with food allergies—specifically **Gluten**, **Dairy**, and **Nuts** (Peanuts / Tree Nuts)—face significant safety risks and confusion when selecting menu items. 
 
-This project provides an autonomous AI Agent featuring **Golden Dataset Benchmark Evaluation**, **Multi-Model Routing**, **Policy Guardrails with Self-Reflection**, **Human-in-the-Loop (HITL) Confirmation Hooks**, **Persistent Session Memory**, and **Native Gemini LLM Tool Calling**:
-1. **Golden Dataset Benchmark Suite (`data/golden_evaluation_dataset.json` & `src/evaluator.py`)**: Ground-truth golden dataset evaluating safety accuracy, recall, medical disclaimer compliance, and execution latency (**100% Accuracy, 100% Compliance**).
-2. **Multi-Model Router (`src/model_router.py`)**: Dynamically routes tasks based on query complexity. Low-complexity lookups use `gemini-2.5-flash`; high-complexity multi-allergy queries use `gemini-2.5-pro`.
-3. **Policy Guardrails & Self-Evaluation Engine (`src/guardrails.py`)**: Dedicated policy plugins (`MedicalDisclaimerPolicy`, `AllergenStrictnessPolicy`) and an autonomous self-reflection pass (`SelfEvaluationEngine`) that verifies verdicts and self-corrects discrepancies before returning output.
-4. **Human-in-the-Loop (HITL) Confirmation Hooks (`src/hitl.py`)**: Generates explicit user confirmation tokens (`POST /api/hitl/confirm`) for high-risk allergen warnings and severe nut allergy alerts.
-5. **Persistent Session Memory & History Compaction (`src/memory.py`)**: Stores user allergy profiles and prompt history to disk (`data/sessions/`) across server restarts and compacts older turns into high-density executive context summaries via async background threads.
-6. **Gemini Flash Intent Sub-Agent (`AllergyExtractorAgent`)**: Emits food allergy categories (`Gluten`, `Dairy`, `Nuts`) mentioned in natural language prompt text.
-7. **Native LLM Tool Calling (`McDonaldsAllergenAgent`)**: Employs Gemini LLM with explicit tool declarations (`tools=[evaluate_allergen_safety, evaluate_category_safety, search_safe_items, lookup_item_allergens]`) and LLM-guided error recovery.
-8. **Interactive Web UI**: Offers single-click allergy profile toggles with dynamic auto-detection sync, natural language chat input, visual safety badges, HITL confirmation prompts, and transparent execution traces.
+This project provides an autonomous AI Agent featuring **Structured JSON Logging**, **OpenTelemetry Distributed Tracing**, **PII Redaction**, **Golden Dataset Evaluation**, **Multi-Model Routing**, **Policy Guardrails with Self-Reflection**, **Human-in-the-Loop (HITL) Confirmation Hooks**, **Persistent Session Memory**, and **Native Gemini LLM Tool Calling**:
+1. **Structured JSON Logging & PII Redaction Engine (`src/telemetry.py`)**: Uses Python standard library `logging` with `StructuredJSONFormatter` and `PIIRedactorFilter` to redacting emails, phone numbers, and SSNs.
+2. **OpenTelemetry Distributed Tracing**: Generates W3C `traceparent` headers (`00-{trace_id}-{span_id}-01`) tracking span hierarchies across sub-agent extraction, model routing, tool execution, and guardrail reflection.
+3. **Intent-Outcome Tracking**: Captures user query intents (`INTENT_EVALUATE_ALLERGEN_SAFETY`, `INTENT_CATEGORY_BREAKDOWN`) mapped to final safety outcomes (`OUTCOME_SAFE`, `OUTCOME_UNSAFE`, `OUTCOME_CATEGORY`).
+4. **Golden Dataset Benchmark Suite (`data/golden_evaluation_dataset.json` & `src/evaluator.py`)**: Ground-truth golden dataset evaluating safety accuracy, recall, medical disclaimer compliance, and execution latency (**100% Accuracy, 100% Compliance**).
+5. **Multi-Model Router (`src/model_router.py`)**: Dynamically routes tasks based on query complexity. Low-complexity lookups use `gemini-2.5-flash`; high-complexity multi-allergy queries use `gemini-2.5-pro`.
+6. **Policy Guardrails & Self-Evaluation Engine (`src/guardrails.py`)**: Dedicated policy plugins (`MedicalDisclaimerPolicy`, `AllergenStrictnessPolicy`) and an autonomous self-reflection pass (`SelfEvaluationEngine`) that verifies verdicts and self-corrects discrepancies before returning output.
+7. **Human-in-the-Loop (HITL) Confirmation Hooks (`src/hitl.py`)**: Generates explicit user confirmation tokens (`POST /api/hitl/confirm`) for high-risk allergen warnings.
+8. **Persistent Session Memory & History Compaction (`src/memory.py`)**: Stores user allergy profiles and prompt history to disk (`data/sessions/`) across server restarts.
+9. **Interactive Web UI**: Offers single-click allergy profile toggles with dynamic auto-detection sync, natural language chat input, visual safety badges, HITL confirmation prompts, and transparent execution traces.
 
 ---
 
@@ -28,7 +29,7 @@ This project provides an autonomous AI Agent featuring **Golden Dataset Benchmar
 | **Safety Verdict Accuracy** | **100.0%** | ≥ 95.0% | ✅ PASS |
 | **Medical Disclaimer Compliance** | **100.0%** | 100.0% | ✅ PASS |
 | **Allergen Recall Rate** | **100.0%** | 100.0% | ✅ PASS |
-| **Average Execution Latency** | **0.12 ms** | < 500 ms | ✅ PASS |
+| **Average Execution Latency** | **0.25 ms** | < 500 ms | ✅ PASS |
 
 Report generated by running `python3 src/evaluator.py` (saved to `logs/golden_eval_report.json`).
 
@@ -41,8 +42,8 @@ Report generated by running `python3 src/evaluator.py` (saved to `logs/golden_ev
 | **1. Tool & Interface Design** | **5 / 5** | • **Comprehensive Parameter Schemas**: All tool functions (`lookup_item_allergens`, `search_safe_items`, `evaluate_allergen_safety`, `evaluate_category_safety`) feature explicit Google-style docstrings with complete `Args:` and `Returns:` schema descriptions.<br>• **Simple Table File**: `data/mcdonalds_allergens.json`.<br>• **Web UI**: Dark glassmorphism Web UI (`static/index.html`, `static/style.css`, `static/app.js`) with single-click allergy toggles auto-synced with Gemini Flash outputs, HITL confirmation alerts, and visual safety badges (`✅ SAFE`, `❌ UNSAFE`). |
 | **2. Context & Memory** | **5 / 5** | • **Persistent Session Storage**: Stores session state to disk (`data/sessions/{session_id}.json`).<br>• **History Compaction Engine**: Automatically condenses older conversation turns into high-density executive context summaries.<br>• **Async Background Operations**: Uses thread pool executors for non-blocking disk persistence and background compaction.<br>• **System Prompt**: Enforces persona (**McDonald's Allergen Safety Assistant**) and mandatory medical disclaimers. |
 | **3. Orchestration & Logic** | **5 / 5** | • **Multi-Model Routing**: Dynamic routing between `gemini-2.5-flash` and `gemini-2.5-pro` based on query complexity.<br>• **Policy Guardrails & Self-Reflection**: Autonomous self-evaluation engine (`SelfEvaluationEngine`) verifying safety verdicts.<br>• **Human-in-the-Loop (HITL)**: Explicit confirmation hooks (`HITLConfirmationManager`) and confirmation endpoint (`/api/hitl/confirm`).<br>• **Native LLM Function Calling**: Direct Gemini LLM tool invocation (`tools=[...]`) with explicit JSON parameter schemas.<br>• **LLM-Guided Error Recovery**: Handles unknown/ambiguous items, category fallback (*burgers*, *milkshakes*, *fries*, *drinks*), and cross-contamination warnings. |
-| **4. Observability & Tracing** | **5 / 5** | • Real-time telemetry engine (`src/telemetry.py`) logging structured JSON trajectories, execution latency, tool inputs/outputs.<br>• REST API endpoint `/api/traces` exposing execution logs.<br>• Live expandable Trace & Telemetry drawer built directly into the Web UI. |
-| **5. Infrastructure & CI/CD** | **5 / 5** | • **Golden Evaluation Suite**: Ground-truth golden dataset benchmark (`src/evaluator.py`, `data/golden_evaluation_dataset.json`, `tests/test_golden_evaluation.py`) running accuracy, recall, and disclaimer compliance tests.<br>• **CI/CD & Unit Tests**: GitHub Actions workflow (`.github/workflows/ci.yml`) running 29 automated unit and evaluation tests.<br>• Production containerization (`Dockerfile`, `docker-compose.yml`). |
+| **4. Observability & Tracing** | **5 / 5** | • **Structured JSON Logging**: Standard library `logging` with `StructuredJSONFormatter` saving to `logs/agent_telemetry.jsonl`.<br>• **OpenTelemetry Tracing**: W3C `traceparent` headers and span hierarchy.<br>• **PII Redaction Filter**: Automatic regex masking of emails, phone numbers, and SSNs.<br>• **Intent-Outcome Tracking**: Maps user intents to safety verdict outcomes.<br>• **REST & UI Drawer**: `/api/traces` endpoint and live expandable telemetry drawer in Web UI. |
+| **5. Infrastructure & CI/CD** | **5 / 5** | • **Golden Evaluation Suite**: Ground-truth golden dataset benchmark (`src/evaluator.py`, `data/golden_evaluation_dataset.json`, `tests/test_golden_evaluation.py`) running accuracy, recall, and disclaimer compliance tests.<br>• **CI/CD & Unit Tests**: GitHub Actions workflow (`.github/workflows/ci.yml`) running 30 automated unit and evaluation tests.<br>• Production containerization (`Dockerfile`, `docker-compose.yml`). |
 
 ---
 
@@ -51,10 +52,10 @@ Report generated by running `python3 src/evaluator.py` (saved to `logs/golden_ev
 | Endpoint | Method | Description |
 | :--- | :---: | :--- |
 | `GET /` | `GET` | Serves the interactive Web UI. |
-| `POST /api/chat` | `POST` | Evaluates prompt against allergen table file (`{"prompt": "...", "allergies": ["Gluten", "Dairy"]}`). Returns model routing, self-evaluation, HITL hooks, and telemetry trace. |
+| `POST /api/chat` | `POST` | Evaluates prompt against allergen table file (`{"prompt": "...", "allergies": ["Gluten", "Dairy"]}`). Returns OpenTelemetry spans, intent-outcome data, model routing, self-evaluation, HITL hooks, and telemetry trace. |
 | `POST /api/hitl/confirm` | `POST` | Confirms Human-in-the-Loop medical warning acknowledgement (`{"token": "hitl_..."}`). |
 | `GET /api/menu` | `GET` | Returns harvested McDonald's simple table dataset. |
-| `GET /api/traces` | `GET` | Returns recent telemetry traces and tool call logs. |
+| `GET /api/traces` | `GET` | Returns recent OpenTelemetry traces and tool call logs. |
 | `GET /api/health` | `GET` | Health check endpoint returning system status. |
 
 ---
@@ -81,7 +82,7 @@ Open `http://localhost:8000` in your web browser.
 ---
 
 ## 🧪 Testing & CI
-Run unit & golden evaluation tests across all modules (29 tests):
+Run unit & golden evaluation tests across all modules (30 tests):
 ```bash
 python3 -m unittest discover tests
 ```
