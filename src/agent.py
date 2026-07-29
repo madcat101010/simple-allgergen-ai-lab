@@ -1,13 +1,17 @@
 """
-McDonald's Allergen AI Agent Core Orchestration
-------------------------------------------------
-Orchestrates system prompts, user allergen profiles, tool invocations,
-and safety verdicts reading from `data/mcdonalds_allergens.json`.
+McDonald's Allergen AI Agent (ADK Agentic Multi-Agent Architecture)
+---------------------------------------------------------------------
+Implements an agentic workflow following the Google Agent Development Kit (ADK) pattern:
+1. AllergyExtractorAgent: Dedicated Sub-Agent that extracts allergen intent from natural language.
+2. McDonaldsAllergenAgent: Primary Orchestrator Agent equipped with data lookup tools.
 """
 
 import os
 import json
+import urllib.request
+import urllib.error
 from typing import List, Dict, Any, Optional
+
 from src.tools import (
     lookup_item_allergens,
     search_safe_items,
@@ -17,68 +21,146 @@ from src.tools import (
     GENERIC_CATEGORY_MAP
 )
 
-SYSTEM_PROMPT = """
-You are the official McDonald's Allergen Safety AI Assistant.
-Your primary mission is to protect customers with food allergies—specifically Gluten, Dairy, and/or Nut allergies—by analyzing McDonald's menu items against their specific allergy profile.
-
-GUIDELINES & CONSTRAINTS:
-1. ALWAYS read allergen data from the official McDonald's allergen table file using your tools.
-2. NEVER guess or hallucinate allergen content or ingredients.
-3. Explicitly state the safety verdict:
-   - ✅ SAFE: Item contains no matching allergen ingredients.
-   - ❌ UNSAFE: Item directly contains one or more specified allergens.
-   - ❓ UNKNOWN / AMBIGUOUS: Item not found or prompt is ambiguous.
-4. MANDATORY MEDICAL DISCLAIMER: Always remind users that McDonald's kitchens use shared preparation areas, fryers, and equipment where cross-contamination may occur.
-"""
+# Optional google-genai SDK import
+try:
+    from google import genai
+    HAS_GENAI_SDK = True
+except ImportError:
+    HAS_GENAI_SDK = False
 
 
+# =====================================================================
+# 1. ADK Sub-Agent: AllergyExtractorAgent
+# =====================================================================
+class AllergyExtractorAgent:
+    """
+    ADK Sub-Agent specialized in analyzing natural language prompts
+    and emitting structured food allergy categories (Gluten, Dairy, Nuts).
+    """
+
+    SYSTEM_INSTRUCTION = """
+    You are an ADK Sub-Agent specializing in food allergy intent extraction.
+    Analyze the input text and extract any mentioned food allergies.
+    Categorize into:
+    - Gluten (includes wheat, celiac, bread, flour)
+    - Dairy (includes milk, cheese, lactose, butter, cream)
+    - Nuts (includes peanuts, tree nuts, almonds, walnuts)
+    Output ONLY a JSON object: {"allergies": ["Gluten", "Dairy", "Nuts"]}
+    """
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
+
+    def run(self, prompt: str) -> List[str]:
+        """Executes the sub-agent loop to emit extracted allergies."""
+        if self.api_key and HAS_GENAI_SDK:
+            try:
+                client = genai.Client(api_key=self.api_key)
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=f"{self.SYSTEM_INSTRUCTION}\n\nUser Input: \"{prompt}\"",
+                    config={"response_mime_type": "application/json"}
+                )
+                data = json.loads(response.text)
+                return [a.title() for a in data.get("allergies", []) if a.title() in ["Gluten", "Dairy", "Nuts"]]
+            except Exception:
+                pass
+
+        if self.api_key:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.api_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": f"{self.SYSTEM_INSTRUCTION}\n\nUser Input: \"{prompt}\""}]}],
+                    "generationConfig": {"responseMimeType": "application/json"}
+                }
+                req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    result = json.loads(resp.read().decode("utf-8"))
+                    text_out = result["candidates"][0]["content"]["parts"][0]["text"]
+                    data = json.loads(text_out)
+                    return [a.title() for a in data.get("allergies", []) if a.title() in ["Gluten", "Dairy", "Nuts"]]
+            except Exception:
+                pass
+
+        # ADK Deterministic Fallback Agent Logic
+        clean_text = prompt.lower()
+        extracted = []
+        if any(w in clean_text for w in ["gluten", "wheat", "celiac", "bread", "bun", "flour"]):
+            extracted.append("Gluten")
+        if any(w in clean_text for w in ["dairy", "milk", "cheese", "lactose", "cream", "butter"]):
+            extracted.append("Dairy")
+        if any(w in clean_text for w in ["nut", "nuts", "peanut", "peanuts", "tree nut", "almond", "walnut"]):
+            extracted.append("Nuts")
+        return extracted
+
+
+# =====================================================================
+# 2. ADK Primary Agent: McDonaldsAllergenAgent
+# =====================================================================
 class AllergenAgent:
+    """
+    ADK Main Orchestrator Agent that delegates allergy intent extraction
+    to AllergyExtractorAgent, executes simple table tools, and formulates safety verdicts.
+    """
+
+    SYSTEM_INSTRUCTION = """
+    You are the official McDonald's Allergen Safety AI Assistant.
+    Your primary mission is to protect customers with food allergies—specifically Gluten, Dairy, and/or Nut allergies—by analyzing McDonald's menu items against their specific allergy profile.
+
+    GUIDELINES & CONSTRAINTS:
+    1. ALWAYS read allergen data from the official McDonald's allergen table file using your tools.
+    2. NEVER guess or hallucinate allergen content or ingredients.
+    3. Explicitly state the safety verdict:
+       - ✅ SAFE: Item contains no matching allergen ingredients.
+       - ❌ UNSAFE: Item directly contains one or more specified allergens.
+       - ❓ UNKNOWN / AMBIGUOUS: Item not found or prompt is ambiguous.
+    4. MANDATORY MEDICAL DISCLAIMER: Always remind users that McDonald's kitchens use shared preparation areas, fryers, and equipment where cross-contamination may occur.
+    """
+
     def __init__(self, data_path: Optional[str] = None):
         self.data_path = data_path
         self.api_key = os.environ.get("GEMINI_API_KEY", "")
+        self.extractor_subagent = AllergyExtractorAgent(api_key=self.api_key)
         self.session_history: List[Dict[str, str]] = []
 
     def process_query(self, prompt: str, user_allergies: List[str]) -> Dict[str, Any]:
         """
-        Main orchestration loop:
-        1. Parses prompt for menu items, generic categories, or safe recommendation requests.
-        2. Auto-detects allergies mentioned in prompt text.
-        3. Executes allergen lookup & safety evaluation tools.
-        4. Formulates a structured safety verdict response.
+        ADK Agentic Pipeline:
+        1. Delegate allergy intent extraction to AllergyExtractorAgent.
+        2. Merge emitted allergies with user UI selections.
+        3. Parse menu items, generic categories, or safe recommendations.
+        4. Read simple table dataset via tools and compute safety verdict.
         """
-        # Save prompt into session history
         self.session_history.append({"role": "user", "content": prompt})
 
-        # Normalize user allergy profile & auto-detect prompt allergies
+        # Step 1: Delegate to AllergyExtractorAgent sub-agent
+        subagent_emitted_allergies = self.extractor_subagent.run(prompt)
+
+        # Step 2: Combine UI toggles and sub-agent emitted allergies
+        combined_set = set([a.strip().title() for a in user_allergies if a.strip()])
+        combined_set.update(subagent_emitted_allergies)
+        normalized_allergies = list(combined_set)
+
         clean_prompt = prompt.lower()
-        detected_allergies = [a.strip().title() for a in user_allergies if a.strip()]
-
-        if ("gluten" in clean_prompt or "wheat" in clean_prompt or "celiac" in clean_prompt) and "Gluten" not in detected_allergies:
-            detected_allergies.append("Gluten")
-        if ("dairy" in clean_prompt or "milk" in clean_prompt or "lactose" in clean_prompt) and "Dairy" not in detected_allergies:
-            detected_allergies.append("Dairy")
-        if ("nut" in clean_prompt or "peanut" in clean_prompt) and "Nuts" not in detected_allergies:
-            detected_allergies.append("Nuts")
-
         words = clean_prompt.replace("?", "").replace("!", "").replace(",", "").split()
 
-        # Load dataset
         dataset = load_allergen_dataset(self.data_path) if self.data_path else load_allergen_dataset()
         matched_item = None
 
-        # 1. First check if a specific menu item is explicitly mentioned in prompt
+        # Step 3: Match specific menu item
         for item in dataset:
             if item["name"].lower() in clean_prompt or item["item_id"].lower() in clean_prompt:
                 matched_item = item["name"]
                 break
 
-        # 2. If a specific item was found, evaluate its allergen safety directly
+        # Step 4: Evaluate specific item if matched
         if matched_item:
-            evaluation = evaluate_allergen_safety(matched_item, detected_allergies, data_path=self.data_path) if self.data_path else evaluate_allergen_safety(matched_item, detected_allergies)
+            evaluation = evaluate_allergen_safety(matched_item, normalized_allergies, data_path=self.data_path) if self.data_path else evaluate_allergen_safety(matched_item, normalized_allergies)
             response_text = self._format_evaluation_response(evaluation)
             result = {
                 "prompt": prompt,
-                "user_allergies": detected_allergies,
+                "adk_subagent_emitted_allergies": subagent_emitted_allergies,
+                "user_allergies": normalized_allergies,
                 "evaluated_item": matched_item,
                 "status": evaluation["status"],
                 "safety_badge": evaluation["safety_badge"],
@@ -89,16 +171,17 @@ class AllergenAgent:
             self.session_history.append({"role": "assistant", "content": response_text})
             return result
 
-        # 3. Check if the query contains generic category terms (e.g., 'burger', 'burgers', 'shake', 'milkshake', 'breakfast')
+        # Step 5: Evaluate generic categories if matched
         for word in words:
             if word in GENERIC_CATEGORY_MAP:
-                cat_eval = evaluate_category_safety(word, detected_allergies, data_path=self.data_path) if self.data_path else evaluate_category_safety(word, detected_allergies)
+                cat_eval = evaluate_category_safety(word, normalized_allergies, data_path=self.data_path) if self.data_path else evaluate_category_safety(word, normalized_allergies)
                 if cat_eval:
-                    response_text = self._format_category_response(cat_eval, detected_allergies)
+                    response_text = self._format_category_response(cat_eval, normalized_allergies)
                     badge = "✅ SAFE CATEGORY" if cat_eval["unsafe_count"] == 0 else "ℹ️ CATEGORY BREAKDOWN"
                     result = {
                         "prompt": prompt,
-                        "user_allergies": detected_allergies,
+                        "adk_subagent_emitted_allergies": subagent_emitted_allergies,
+                        "user_allergies": normalized_allergies,
                         "status": "CATEGORY",
                         "safety_badge": badge,
                         "response": response_text,
@@ -108,14 +191,15 @@ class AllergenAgent:
                     self.session_history.append({"role": "assistant", "content": response_text})
                     return result
 
-        # 4. Check if user is asking for safe options/recommendations in general
+        # Step 6: Safe items recommendation
         if "safe" in clean_prompt or "what can i eat" in clean_prompt or "recommend" in clean_prompt or "options" in clean_prompt:
-            safe_items = search_safe_items(detected_allergies, data_path=self.data_path) if self.data_path else search_safe_items(detected_allergies)
-            response_text = self._format_safe_items_response(safe_items, detected_allergies)
+            safe_items = search_safe_items(normalized_allergies, data_path=self.data_path) if self.data_path else search_safe_items(normalized_allergies)
+            response_text = self._format_safe_items_response(safe_items, normalized_allergies)
             
             result = {
                 "prompt": prompt,
-                "user_allergies": detected_allergies,
+                "adk_subagent_emitted_allergies": subagent_emitted_allergies,
+                "user_allergies": normalized_allergies,
                 "status": "RECOMMENDATION",
                 "safety_badge": "ℹ️ RECOMMENDATION",
                 "response": response_text,
@@ -125,11 +209,12 @@ class AllergenAgent:
             self.session_history.append({"role": "assistant", "content": response_text})
             return result
 
-        # 5. Fallback when query item or term is unknown
+        # Step 7: Unknown query fallback
         response_text = f"❓ UNKNOWN ITEM: I couldn't identify a specific item or menu category in your query ('{prompt}'). Please try asking about specific items like 'Big Mac', 'Egg McMuffin', 'World Famous Fries', or generic menu categories like 'burgers', 'shakes', 'breakfast', or ask 'What can I eat?'."
         result = {
             "prompt": prompt,
-            "user_allergies": detected_allergies,
+            "adk_subagent_emitted_allergies": subagent_emitted_allergies,
+            "user_allergies": normalized_allergies,
             "status": "UNKNOWN",
             "safety_badge": "❓ UNKNOWN",
             "response": response_text,

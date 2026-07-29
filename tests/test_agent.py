@@ -3,7 +3,21 @@ Unit tests for McDonald's Allergen Agent (src/agent.py)
 """
 
 import unittest
-from src.agent import AllergenAgent
+from src.agent import AllergenAgent, AllergyExtractorAgent
+
+
+class TestAllergyExtractorAgent(unittest.TestCase):
+    def setUp(self):
+        self.subagent = AllergyExtractorAgent()
+
+    def test_subagent_extracts_gluten_and_dairy(self):
+        allergies = self.subagent.run("I can't eat bread or cheese")
+        self.assertIn("Gluten", allergies)
+        self.assertIn("Dairy", allergies)
+
+    def test_subagent_extracts_nuts(self):
+        allergies = self.subagent.run("I have a severe peanut allergy")
+        self.assertIn("Nuts", allergies)
 
 
 class TestAllergenAgent(unittest.TestCase):

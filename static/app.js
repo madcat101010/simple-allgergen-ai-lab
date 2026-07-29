@@ -24,36 +24,17 @@ function initAllergyToggles() {
     });
 }
 
-// Auto-detect Allergies mentioned in User Prompt and update UI Toggles
-function autoDetectAllergiesFromPrompt(promptText) {
-    const text = promptText.toLowerCase();
-
-    // Check Gluten / Wheat / Celiac
-    if (text.includes("gluten") || text.includes("wheat") || text.includes("celiac")) {
-        if (!activeAllergies.has("Gluten")) {
-            activeAllergies.add("Gluten");
-            const btn = document.getElementById("btn-gluten");
+// Sync UI Toggles with Gemini Flash Emitted Allergies
+function syncUITogglesWithEmittedAllergies(allergies) {
+    if (!allergies || !Array.isArray(allergies)) return;
+    allergies.forEach(allergy => {
+        const formatted = allergy.charAt(0).toUpperCase() + allergy.slice(1).toLowerCase();
+        if (!activeAllergies.has(formatted)) {
+            activeAllergies.add(formatted);
+            const btn = document.getElementById(`btn-${formatted.toLowerCase()}`);
             if (btn) btn.classList.add("active");
         }
-    }
-
-    // Check Dairy / Milk / Lactose
-    if (text.includes("dairy") || text.includes("milk") || text.includes("lactose")) {
-        if (!activeAllergies.has("Dairy")) {
-            activeAllergies.add("Dairy");
-            const btn = document.getElementById("btn-dairy");
-            if (btn) btn.classList.add("active");
-        }
-    }
-
-    // Check Nuts / Peanuts / Tree Nuts
-    if (text.includes("nut") || text.includes("peanut") || text.includes("almond")) {
-        if (!activeAllergies.has("Nuts")) {
-            activeAllergies.add("Nuts");
-            const btn = document.getElementById("btn-nuts");
-            if (btn) btn.classList.add("active");
-        }
-    }
+    });
 }
 
 // Quick Sample Prompt Helper
@@ -88,9 +69,6 @@ function initChatForm() {
         const query = input.value.trim();
         if (!query) return;
 
-        // Auto-detect allergies mentioned in query and update UI toggles
-        autoDetectAllergiesFromPrompt(query);
-
         // Render User Message
         appendUserMessage(query);
         input.value = "";
@@ -115,6 +93,11 @@ function initChatForm() {
             loadingCard.remove();
 
             if (response.ok) {
+                // Sync UI Toggles with Gemini Flash emitted allergies
+                if (data.user_allergies) {
+                    syncUITogglesWithEmittedAllergies(data.user_allergies);
+                }
+
                 appendAgentMessage(data);
                 updateTraceDrawer(data);
             } else {
@@ -144,7 +127,7 @@ function appendLoadingMessage() {
     const display = document.getElementById("chat-display");
     const div = document.createElement("div");
     div.className = "msg-bubble msg-agent";
-    div.innerHTML = `<p>🔍 <em>Analyzing McDonald's allergen table data...</em></p>`;
+    div.innerHTML = `<p>⚡ <em>Gemini Flash Agent analyzing allergies & McDonald's menu table data...</em></p>`;
     display.appendChild(div);
     display.scrollTop = display.scrollHeight;
     return div;
