@@ -42,15 +42,24 @@ class AllergenAgent:
         """
         Main orchestration loop:
         1. Parses prompt for menu items, generic categories, or safe recommendation requests.
-        2. Executes allergen lookup & safety evaluation tools.
-        3. Formulates a structured safety verdict response.
+        2. Auto-detects allergies mentioned in prompt text.
+        3. Executes allergen lookup & safety evaluation tools.
+        4. Formulates a structured safety verdict response.
         """
         # Save prompt into session history
         self.session_history.append({"role": "user", "content": prompt})
 
-        # Normalize user allergy profile
-        normalized_allergies = [a.strip().title() for a in user_allergies if a.strip()]
+        # Normalize user allergy profile & auto-detect prompt allergies
         clean_prompt = prompt.lower()
+        detected_allergies = [a.strip().title() for a in user_allergies if a.strip()]
+
+        if ("gluten" in clean_prompt or "wheat" in clean_prompt or "celiac" in clean_prompt) and "Gluten" not in detected_allergies:
+            detected_allergies.append("Gluten")
+        if ("dairy" in clean_prompt or "milk" in clean_prompt or "lactose" in clean_prompt) and "Dairy" not in detected_allergies:
+            detected_allergies.append("Dairy")
+        if ("nut" in clean_prompt or "peanut" in clean_prompt) and "Nuts" not in detected_allergies:
+            detected_allergies.append("Nuts")
+
         words = clean_prompt.replace("?", "").replace("!", "").replace(",", "").split()
 
         # Load dataset
@@ -65,11 +74,11 @@ class AllergenAgent:
 
         # 2. If a specific item was found, evaluate its allergen safety directly
         if matched_item:
-            evaluation = evaluate_allergen_safety(matched_item, normalized_allergies, data_path=self.data_path) if self.data_path else evaluate_allergen_safety(matched_item, normalized_allergies)
+            evaluation = evaluate_allergen_safety(matched_item, detected_allergies, data_path=self.data_path) if self.data_path else evaluate_allergen_safety(matched_item, detected_allergies)
             response_text = self._format_evaluation_response(evaluation)
             result = {
                 "prompt": prompt,
-                "user_allergies": normalized_allergies,
+                "user_allergies": detected_allergies,
                 "evaluated_item": matched_item,
                 "status": evaluation["status"],
                 "safety_badge": evaluation["safety_badge"],
@@ -83,13 +92,13 @@ class AllergenAgent:
         # 3. Check if the query contains generic category terms (e.g., 'burger', 'burgers', 'shake', 'milkshake', 'breakfast')
         for word in words:
             if word in GENERIC_CATEGORY_MAP:
-                cat_eval = evaluate_category_safety(word, normalized_allergies, data_path=self.data_path) if self.data_path else evaluate_category_safety(word, normalized_allergies)
+                cat_eval = evaluate_category_safety(word, detected_allergies, data_path=self.data_path) if self.data_path else evaluate_category_safety(word, detected_allergies)
                 if cat_eval:
-                    response_text = self._format_category_response(cat_eval, normalized_allergies)
+                    response_text = self._format_category_response(cat_eval, detected_allergies)
                     badge = "✅ SAFE CATEGORY" if cat_eval["unsafe_count"] == 0 else "ℹ️ CATEGORY BREAKDOWN"
                     result = {
                         "prompt": prompt,
-                        "user_allergies": normalized_allergies,
+                        "user_allergies": detected_allergies,
                         "status": "CATEGORY",
                         "safety_badge": badge,
                         "response": response_text,
@@ -101,12 +110,12 @@ class AllergenAgent:
 
         # 4. Check if user is asking for safe options/recommendations in general
         if "safe" in clean_prompt or "what can i eat" in clean_prompt or "recommend" in clean_prompt or "options" in clean_prompt:
-            safe_items = search_safe_items(normalized_allergies, data_path=self.data_path) if self.data_path else search_safe_items(normalized_allergies)
-            response_text = self._format_safe_items_response(safe_items, normalized_allergies)
+            safe_items = search_safe_items(detected_allergies, data_path=self.data_path) if self.data_path else search_safe_items(detected_allergies)
+            response_text = self._format_safe_items_response(safe_items, detected_allergies)
             
             result = {
                 "prompt": prompt,
-                "user_allergies": normalized_allergies,
+                "user_allergies": detected_allergies,
                 "status": "RECOMMENDATION",
                 "safety_badge": "ℹ️ RECOMMENDATION",
                 "response": response_text,
@@ -120,7 +129,7 @@ class AllergenAgent:
         response_text = f"❓ UNKNOWN ITEM: I couldn't identify a specific item or menu category in your query ('{prompt}'). Please try asking about specific items like 'Big Mac', 'Egg McMuffin', 'World Famous Fries', or generic menu categories like 'burgers', 'shakes', 'breakfast', or ask 'What can I eat?'."
         result = {
             "prompt": prompt,
-            "user_allergies": normalized_allergies,
+            "user_allergies": detected_allergies,
             "status": "UNKNOWN",
             "safety_badge": "❓ UNKNOWN",
             "response": response_text,
