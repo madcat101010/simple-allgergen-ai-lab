@@ -4,6 +4,7 @@ Standalone Standard Library Web Server for McDonald's Allergen AI Agent
 Zero-dependency HTTP server built using Python's native http.server module.
 Serves static UI files and provides REST API endpoints:
 - POST /api/chat
+- POST /api/hitl/confirm
 - GET  /api/menu
 - GET  /api/traces
 - GET  /api/health
@@ -26,6 +27,7 @@ if PROJECT_ROOT not in sys.path:
 from src.agent import AllergenAgent
 from src.tools import load_allergen_dataset
 from src.telemetry import telemetry
+from src.hitl import hitl_manager
 
 PORT = 8000
 agent = AllergenAgent()
@@ -33,7 +35,6 @@ agent = AllergenAgent()
 
 class AllergenHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        # Serve relative to PROJECT_ROOT so /static/style.css and /static/app.js map directly
         super().__init__(*args, directory=PROJECT_ROOT, **kwargs)
 
     def _send_json(self, data: Any, status_code: int = 200):
@@ -72,6 +73,19 @@ class AllergenHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         url = urllib.parse.urlparse(self.path)
+
+        if url.path == "/api/hitl/confirm":
+            content_len = int(self.headers.get("Content-Length", 0))
+            post_body = self.rfile.read(content_len).decode("utf-8")
+            try:
+                payload = json.loads(post_body)
+                token = payload.get("token", "")
+                res = hitl_manager.confirm_hitl_action(token)
+                self._send_json(res)
+            except Exception as e:
+                self._send_json({"error": str(e)}, status_code=500)
+            return
+
         if url.path == "/api/chat":
             content_len = int(self.headers.get("Content-Length", 0))
             post_body = self.rfile.read(content_len).decode("utf-8")
@@ -80,13 +94,14 @@ class AllergenHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 payload = json.loads(post_body)
                 prompt = payload.get("prompt", "").strip()
                 allergies = payload.get("allergies", [])
+                session_id = payload.get("session_id", "default_session")
 
                 if not prompt:
                     self._send_json({"error": "Prompt cannot be empty"}, status_code=400)
                     return
 
                 start_time = time.time()
-                result = agent.process_query(prompt, allergies)
+                result = agent.process_query(prompt, allergies, session_id=session_id)
                 duration_ms = round((time.time() - start_time) * 1000, 2)
 
                 tool_calls = [
@@ -115,6 +130,9 @@ class AllergenHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     "response": result["response"],
                     "details": result.get("details"),
                     "disclaimer": result.get("disclaimer", "Warning: Shared kitchen prep areas."),
+                    "model_routing": result.get("model_routing"),
+                    "self_evaluation": result.get("self_evaluation"),
+                    "hitl_confirmation": result.get("hitl_confirmation"),
                     "execution_time_ms": duration_ms,
                     "trace": trace
                 }

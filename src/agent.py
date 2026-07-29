@@ -1,8 +1,11 @@
 """
-McDonald's Allergen AI Agent Core Orchestration (Native LLM Function Calling + Memory)
----------------------------------------------------------------------------------------
-Implements Native LLM Function Calling using Google Gemini API (`google-genai` SDK),
-persistent session state, history compaction, and async background memory operations.
+McDonald's Allergen AI Agent Core Orchestration (Multi-Model + Guardrails + HITL + Memory)
+-----------------------------------------------------------------------------------------
+Implements:
+1. Multi-Model Routing: Dynamic selection between gemini-2.5-flash and gemini-2.5-pro based on query complexity.
+2. Policy Guardrails & Self-Evaluation: Dedicated policy plugins & self-reflection engine.
+3. Human-in-the-Loop (HITL): Explicit confirmation hooks for high-risk allergen warnings.
+4. Persistent Memory & History Compaction: Async background thread memory persistence.
 """
 
 import os
@@ -20,6 +23,9 @@ from src.tools import (
     GENERIC_CATEGORY_MAP
 )
 from src.memory import memory_manager, SessionMemoryManager
+from src.model_router import model_router
+from src.guardrails import guardrails
+from src.hitl import hitl_manager
 
 # Optional google-genai SDK import
 try:
@@ -103,21 +109,18 @@ class AllergyExtractorAgent:
 
 class AllergenAgent:
     """
-    Main Orchestrator Agent featuring Native LLM Function Calling,
-    persistent session memory, automated history compaction, and LLM-guided error recovery.
+    Main Orchestrator Agent featuring Multi-Model Routing, Native LLM Function Calling,
+    Policy Guardrails with Self-Reflection, HITL Confirmation Hooks, and Persistent Memory.
     """
 
     SYSTEM_INSTRUCTION = """
     You are the official McDonald's Allergen Safety AI Assistant.
     Your primary mission is to protect customers with food allergies—specifically Gluten, Dairy, and/or Nut allergies—by analyzing McDonald's menu items against their specific allergy profile.
 
-    NATIVE LLM TOOL CALLING & ERROR RECOVERY INSTRUCTIONS:
+    NATIVE LLM TOOL CALLING & GUARDRAILS INSTRUCTIONS:
     1. ALWAYS call your declared tool functions (`evaluate_allergen_safety`, `evaluate_category_safety`, `search_safe_items`, `lookup_item_allergens`) to retrieve official menu data.
     2. NEVER guess or hallucinate allergen content or ingredients.
-    3. If a tool returns status 'UNKNOWN' (item not found), perform LLM-guided error recovery:
-       - Attempt fuzzy lookup using `lookup_item_allergens`.
-       - Or check category safety using `evaluate_category_safety`.
-       - Or clearly explain to the user that the item was not found and suggest valid menu items.
+    3. If a tool returns status 'UNKNOWN' (item not found), perform LLM-guided error recovery.
     4. MANDATORY MEDICAL DISCLAIMER: Always include a medical disclaimer in your final response warning that McDonald's kitchens use shared preparation areas, fryers, and equipment where cross-contact may occur.
     """
 
@@ -126,6 +129,9 @@ class AllergenAgent:
         self.api_key = os.environ.get("GEMINI_API_KEY", "")
         self.extractor_subagent = AllergyExtractorAgent(api_key=self.api_key)
         self.memory = memory_manager
+        self.router = model_router
+        self.guardrails = guardrails
+        self.hitl = hitl_manager
 
     def process_query(
         self,
@@ -134,37 +140,56 @@ class AllergenAgent:
         session_id: str = "default_session"
     ) -> Dict[str, Any]:
         """
-        Processes user query using Native LLM Function Calling & Persistent Memory loop:
-        1. Loads persistent session state & history compaction summary.
-        2. Emits allergies via sub-agent.
-        3. Executes LLM tool calling loop with Gemini Flash (or offline tool dispatch).
-        4. Appends turns to persistent session storage and triggers async background compaction.
+        Orchestration pipeline:
+        1. Evaluates multi-model routing based on query complexity.
+        2. Extracts allergy intent via sub-agent.
+        3. Executes LLM tool calling loop with selected model.
+        4. Applies Policy Plugins & Self-Evaluation reflection.
+        5. Computes Human-in-the-Loop (HITL) confirmation hooks.
+        6. Appends to persistent session storage asynchronously.
         """
-        # Load persistent session state & compacted history summary
+        # Step 1: Multi-Model Routing based on complexity
+        model_selection = self.router.select_model(prompt, user_allergies)
+        selected_model = model_selection["model_name"]
+
+        # Step 2: Persistent session loading & sub-agent intent extraction
         session_state = self.memory.load_session(session_id)
         compacted_summary = session_state.get("compacted_summary", "")
 
-        # 1. Extract allergies
         subagent_emitted_allergies = self.extractor_subagent.run(prompt)
         combined_set = set([a.strip().title() for a in user_allergies if a.strip()])
         combined_set.update(subagent_emitted_allergies)
         normalized_allergies = list(combined_set)
 
-        # 2. Try Native LLM Function Calling if API key and SDK are available
+        # Step 3: LLM Tool Calling or local tool dispatch
         result = None
         if self.api_key and HAS_GENAI_SDK:
             try:
-                result = self._execute_native_llm_tool_loop(prompt, normalized_allergies, compacted_summary)
+                result = self._execute_native_llm_tool_loop(prompt, normalized_allergies, compacted_summary, selected_model)
                 if result:
                     result["adk_subagent_emitted_allergies"] = subagent_emitted_allergies
             except Exception:
                 pass
 
-        # 3. Local Tool Dispatch Loop (if LLM SDK not available)
         if not result:
             result = self._execute_local_tool_loop(prompt, normalized_allergies, subagent_emitted_allergies)
 
-        # 4. Asynchronously append turn, execute history compaction, and persist session to disk
+        result["model_routing"] = model_selection
+
+        # Step 4: Policy Guardrails & Self-Evaluation Engine Pass
+        result = self.guardrails.evaluate_and_reflect(result)
+
+        # Step 5: Evaluate Human-in-the-Loop (HITL) Confirmation Requirement
+        matched_allergens = result.get("details", {}).get("matched_allergens", [])
+        hitl_data = self.hitl.evaluate_hitl_requirement(
+            status=result["status"],
+            item_name=result.get("evaluated_item"),
+            user_allergies=normalized_allergies,
+            matched_allergens=matched_allergens
+        )
+        result["hitl_confirmation"] = hitl_data
+
+        # Step 6: Async background memory persistence & history compaction
         self.memory.append_turn_and_compact(
             session_id=session_id,
             user_prompt=prompt,
@@ -180,18 +205,18 @@ class AllergenAgent:
         self,
         prompt: str,
         normalized_allergies: List[str],
-        compacted_summary: str
+        compacted_summary: str,
+        model_name: str
     ) -> Optional[Dict[str, Any]]:
-        """Executes LLM Tool Calling loop with Gemini Flash and compacted history."""
+        """Executes LLM Tool Calling loop using the model selected by ModelRouter."""
         client = genai.Client(api_key=self.api_key)
         tool_list = [evaluate_allergen_safety, evaluate_category_safety, lookup_item_allergens, search_safe_items]
 
-        # Inject compacted history summary if present
         context_prefix = f"Compacted History Summary: {compacted_summary}\n\n" if compacted_summary else ""
         chat_content = f"{self.SYSTEM_INSTRUCTION}\n{context_prefix}User Allergy Profile: {normalized_allergies}\nUser Query: \"{prompt}\""
 
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=model_name,
             contents=chat_content,
             config=types.GenerateContentConfig(
                 tools=tool_list,
