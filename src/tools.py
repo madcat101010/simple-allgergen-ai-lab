@@ -1,13 +1,23 @@
 """
 McDonald's Allergen Agent Tools & Function Schema Definitions
 --------------------------------------------------------------
-Provides typed tool functions and explicit JSON schema parameter definitions
-for reading the simple table file (`data/mcdonalds_allergens.json`).
+Provides typed tool functions, explicit JSON schema parameter definitions,
+Pydantic input/output models, and strict runtime input validation.
 """
 
 import json
 import os
 from typing import List, Dict, Any, Optional
+
+# Optional Pydantic import with graceful fallback
+try:
+    from pydantic import BaseModel, Field, validate_call
+    HAS_PYDANTIC = True
+except ImportError:
+    HAS_PYDANTIC = False
+    BaseModel = object
+    Field = lambda *args, **kwargs: None
+    validate_call = lambda func: func
 
 # Default path to simple table file
 DEFAULT_DATA_PATH = os.path.join(
@@ -57,19 +67,175 @@ GENERIC_CATEGORY_MAP = {
     "latte": "Drinks"
 }
 
+# ==============================================================================
+# EXPLICIT JSON SCHEMAS FOR LLM TOOL DECLARATIONS & VALIDATION
+# ==============================================================================
+
+LOOKUP_ITEM_ALLERGENS_JSON_SCHEMA = {
+    "type": "object",
+    "title": "LookupItemAllergensInput",
+    "description": "Explicit JSON Schema for lookup_item_allergens tool",
+    "properties": {
+        "item_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name or partial query of the McDonald's menu item (e.g. 'Big Mac', 'fries')."
+        },
+        "data_path": {
+            "type": "string",
+            "default": DEFAULT_DATA_PATH,
+            "description": "Optional file path to the allergen JSON dataset."
+        }
+    },
+    "required": ["item_name"]
+}
+
+EVALUATE_ALLERGEN_SAFETY_JSON_SCHEMA = {
+    "type": "object",
+    "title": "EvaluateAllergenSafetyInput",
+    "description": "Explicit JSON Schema for evaluate_allergen_safety tool",
+    "properties": {
+        "item_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Canonical or queried McDonald's menu item name."
+        },
+        "user_allergies": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Active customer allergies to check (e.g. ['Gluten', 'Dairy', 'Nuts'])."
+        },
+        "data_path": {
+            "type": "string",
+            "default": DEFAULT_DATA_PATH,
+            "description": "Optional file path to dataset JSON file."
+        }
+    },
+    "required": ["item_name", "user_allergies"]
+}
+
+SEARCH_SAFE_ITEMS_JSON_SCHEMA = {
+    "type": "object",
+    "title": "SearchSafeItemsInput",
+    "description": "Explicit JSON Schema for search_safe_items tool",
+    "properties": {
+        "user_allergies": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Active customer food allergy profile."
+        },
+        "category": {
+            "type": ["string", "null"],
+            "default": None,
+            "description": "Optional category filter (e.g. 'Breakfast', 'Burgers')."
+        },
+        "data_path": {
+            "type": "string",
+            "default": DEFAULT_DATA_PATH,
+            "description": "Optional file path to dataset JSON file."
+        }
+    },
+    "required": ["user_allergies"]
+}
+
+EVALUATE_CATEGORY_SAFETY_JSON_SCHEMA = {
+    "type": "object",
+    "title": "EvaluateCategorySafetyInput",
+    "description": "Explicit JSON Schema for evaluate_category_safety tool",
+    "properties": {
+        "category_or_generic": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Generic category search query (e.g. 'burgers', 'shakes', 'fries')."
+        },
+        "user_allergies": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Active user food allergy profile."
+        },
+        "data_path": {
+            "type": "string",
+            "default": DEFAULT_DATA_PATH,
+            "description": "Optional file path to dataset JSON file."
+        }
+    },
+    "required": ["category_or_generic", "user_allergies"]
+}
+
+TOOL_JSON_SCHEMAS = {
+    "lookup_item_allergens": LOOKUP_ITEM_ALLERGENS_JSON_SCHEMA,
+    "evaluate_allergen_safety": EVALUATE_ALLERGEN_SAFETY_JSON_SCHEMA,
+    "search_safe_items": SEARCH_SAFE_ITEMS_JSON_SCHEMA,
+    "evaluate_category_safety": EVALUATE_CATEGORY_SAFETY_JSON_SCHEMA
+}
+
+# ==============================================================================
+# PYDANTIC MODELS FOR STRICT SCHEMAS & INPUT VALIDATION
+# ==============================================================================
+
+if HAS_PYDANTIC:
+    class LookupItemAllergensInputModel(BaseModel):
+        item_name: str = Field(..., min_length=1, description="Menu item name")
+        data_path: str = Field(default=DEFAULT_DATA_PATH, description="Dataset path")
+
+    class EvaluateAllergenSafetyInputModel(BaseModel):
+        item_name: str = Field(..., min_length=1, description="Menu item name")
+        user_allergies: List[str] = Field(..., description="Active user allergies")
+        data_path: str = Field(default=DEFAULT_DATA_PATH, description="Dataset path")
+
+    class SearchSafeItemsInputModel(BaseModel):
+        user_allergies: List[str] = Field(..., description="Active user allergies")
+        category: Optional[str] = Field(default=None, description="Optional category filter")
+        data_path: str = Field(default=DEFAULT_DATA_PATH, description="Dataset path")
+
+    class EvaluateCategorySafetyInputModel(BaseModel):
+        category_or_generic: str = Field(..., min_length=1, description="Category term")
+        user_allergies: List[str] = Field(..., description="Active user allergies")
+        data_path: str = Field(default=DEFAULT_DATA_PATH, description="Dataset path")
+
+
+def validate_tool_input(tool_name: str, kwargs: Dict[str, Any]) -> None:
+    """
+    Strict Runtime Input Validator enforcing JSON schema & type constraints on tool invocations.
+
+    Args:
+        tool_name (str): Name of the tool being called.
+        kwargs (Dict[str, Any]): Arguments passed to the tool.
+
+    Raises:
+        ValueError: If a required argument is missing or empty.
+        TypeError: If an argument fails type validation constraints.
+    """
+    schema = TOOL_JSON_SCHEMAS.get(tool_name)
+    if not schema:
+        return
+
+    # 1. Required field checks
+    required_fields = schema.get("required", [])
+    for field in required_fields:
+        if field not in kwargs or kwargs[field] is None:
+            raise ValueError(f"Tool '{tool_name}' missing required parameter: '{field}'.")
+
+    # 2. Type & constraint checks
+    properties = schema.get("properties", {})
+    for param_name, value in kwargs.items():
+        if param_name not in properties or value is None:
+            continue
+        expected_type = properties[param_name].get("type")
+        
+        if expected_type == "string":
+            if not isinstance(value, str):
+                raise TypeError(f"Tool '{tool_name}' parameter '{param_name}' must be a string, got {type(value).__name__}.")
+            if properties[param_name].get("minLength", 0) > 0 and len(value.strip()) == 0:
+                raise ValueError(f"Tool '{tool_name}' parameter '{param_name}' cannot be empty string.")
+        elif expected_type == "array":
+            if not isinstance(value, (list, tuple)):
+                raise TypeError(f"Tool '{tool_name}' parameter '{param_name}' must be a list, got {type(value).__name__}.")
+
 
 def load_allergen_dataset(data_path: str = DEFAULT_DATA_PATH) -> List[Dict[str, Any]]:
     """
     Loads and caches the McDonald's simple allergen table dataset into memory.
-
-    Args:
-        data_path (str, optional): Path to the mcdonalds_allergens.json file. Defaults to DEFAULT_DATA_PATH.
-
-    Returns:
-        List[Dict[str, Any]]: List of dictionary records containing menu item allergen profiles.
-
-    Raises:
-        FileNotFoundError: If the specified data_path file does not exist on disk.
     """
     global _DATASET_CACHE
     if _DATASET_CACHE is not None and data_path == DEFAULT_DATA_PATH:
@@ -89,20 +255,8 @@ def load_allergen_dataset(data_path: str = DEFAULT_DATA_PATH) -> List[Dict[str, 
 def lookup_item_allergens(item_name: str, data_path: str = DEFAULT_DATA_PATH) -> Dict[str, Any]:
     """
     Looks up a McDonald's menu item by name or partial query in the simple allergen table file.
-
-    Args:
-        item_name (str): Name or partial query of the menu item (e.g., 'Big Mac', 'fries', 'McChicken').
-            Case-insensitive exact and substring matches are performed.
-        data_path (str, optional): Path to the JSON allergen table dataset. Defaults to DEFAULT_DATA_PATH.
-
-    Returns:
-        Dict[str, Any]: Dictionary containing lookup results:
-            - found (bool): True if item was located, False otherwise.
-            - match_type (str): 'exact', 'fuzzy', 'ambiguous', or None.
-            - item (dict, optional): Full menu item record with keys [item_id, name, category, url, allergens, contains_gluten, contains_dairy, contains_nuts, ingredients_summary].
-            - matches (list, optional): List of matching item names if query is ambiguous.
-            - message (str, optional): Explanation string if item was not found.
     """
+    validate_tool_input("lookup_item_allergens", {"item_name": item_name, "data_path": data_path})
     dataset = load_allergen_dataset(data_path)
     clean_query = item_name.strip().lower()
 
@@ -111,7 +265,7 @@ def lookup_item_allergens(item_name: str, data_path: str = DEFAULT_DATA_PATH) ->
         if item["item_id"].lower() == clean_query or item["name"].lower() == clean_query:
             return {"found": True, "match_type": "exact", "item": item}
 
-    # 2. Substring match (e.g. "fries" -> "World Famous Fries", "big mac" -> "Big Mac")
+    # 2. Substring match
     matching_items = []
     for item in dataset:
         if clean_query in item["name"].lower() or clean_query in item["item_id"].lower():
@@ -140,22 +294,13 @@ def evaluate_category_safety(
     data_path: str = DEFAULT_DATA_PATH
 ) -> Optional[Dict[str, Any]]:
     """
-    Evaluates safety for all menu items within a generic food category (e.g., 'burgers', 'shakes', 'breakfast', 'fries').
-
-    Args:
-        category_or_generic (str): Category term (e.g., 'burgers', 'shakes', 'breakfast', 'drinks', 'sides').
-        user_allergies (List[str]): Active list of user food allergies (e.g., ['Gluten', 'Dairy', 'Nuts']).
-        data_path (str, optional): Path to the JSON allergen table dataset. Defaults to DEFAULT_DATA_PATH.
-
-    Returns:
-        Optional[Dict[str, Any]]: Category safety breakdown containing:
-            - category (str): Matched canonical category name (e.g., 'Burgers').
-            - total_items (int): Total count of items evaluated in category.
-            - safe_count (int): Count of safe items.
-            - unsafe_count (int): Count of unsafe items.
-            - evaluations (List[dict]): Detailed safety evaluation dictionary per item in category.
-            Returns None if category term cannot be resolved.
+    Evaluates safety for all menu items within a generic food category.
     """
+    validate_tool_input("evaluate_category_safety", {
+        "category_or_generic": category_or_generic,
+        "user_allergies": user_allergies,
+        "data_path": data_path
+    })
     dataset = load_allergen_dataset(data_path)
     clean_term = category_or_generic.strip().lower()
 
@@ -203,15 +348,12 @@ def search_safe_items(
 ) -> List[Dict[str, Any]]:
     """
     Filters the McDonald's simple table dataset to return items safe for a specified user allergy profile.
-
-    Args:
-        user_allergies (List[str]): Customer food allergy profile (e.g., ['Gluten', 'Dairy', 'Nuts']).
-        category (str, optional): Optional category filter (e.g., 'Breakfast', 'Burgers'). Defaults to None.
-        data_path (str, optional): Path to JSON dataset file. Defaults to DEFAULT_DATA_PATH.
-
-    Returns:
-        List[Dict[str, Any]]: List of safe menu item records containing [item_id, name, category, allergens, ingredients_summary].
     """
+    validate_tool_input("search_safe_items", {
+        "user_allergies": user_allergies,
+        "category": category,
+        "data_path": data_path
+    })
     dataset = load_allergen_dataset(data_path)
     clean_allergies = [a.strip().lower() for a in user_allergies]
 
@@ -251,25 +393,12 @@ def evaluate_allergen_safety(
 ) -> Dict[str, Any]:
     """
     Evaluates whether a specific McDonald's menu item is safe for a customer given their active allergy profile.
-
-    Args:
-        item_name (str): Name of the menu item (e.g., 'Big Mac', 'Quarter Pounder with Cheese', 'World Famous Fries').
-        user_allergies (List[str]): List of customer allergies to evaluate (supported: 'Gluten', 'Dairy', 'Nuts').
-        data_path (str, optional): Path to the mcdonalds_allergens.json dataset file. Defaults to DEFAULT_DATA_PATH.
-
-    Returns:
-        Dict[str, Any]: Detailed safety verdict dictionary containing:
-            - status (str): 'SAFE', 'UNSAFE', or 'UNKNOWN'
-            - safety_badge (str): Display badge ('✅ SAFE', '❌ UNSAFE', '❓ UNKNOWN')
-            - item_name (str): Canonical item name
-            - category (str): Category of item
-            - user_allergies_evaluated (List[str]): Customer allergies checked
-            - matched_allergens (List[str]): Allergens in item matching user profile
-            - all_allergens_in_item (List[str]): Complete allergen list
-            - ingredients_summary (str): Ingredient breakdown
-            - verdict (str): Human-readable verdict statement
-            - disclaimer (str): Cross-contamination medical warning
     """
+    validate_tool_input("evaluate_allergen_safety", {
+        "item_name": item_name,
+        "user_allergies": user_allergies,
+        "data_path": data_path
+    })
     lookup = lookup_item_allergens(item_name, data_path)
     if not lookup["found"]:
         return {
