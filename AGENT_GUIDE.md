@@ -14,7 +14,7 @@ Open **[http://localhost:8000](http://localhost:8000)** in your browser.
 ---
 
 ## 🧪 Running Unit Tests
-Execute the full test suite (21 unit tests across all modules):
+Execute the full test suite (24 unit tests across all modules):
 ```bash
 python3 -m unittest discover tests
 ```
@@ -32,11 +32,13 @@ simple-allgergen-ai-lab/
 │           └── SKILL.md                            # Workspace AI skill definition
 ├── data/
 │   ├── mcdonalds_allergens.json                    # Simple table file (JSON)
-│   └── mcdonalds_allergens.csv                     # Simple table file (CSV)
+│   ├── mcdonalds_allergens.csv                     # Simple table file (CSV)
+│   └── sessions/                                   # Persistent JSON session memory storage
 ├── src/
 │   ├── scraper.py                                  # Data harvester script
-│   ├── tools.py                                    # Allergen lookup, category & item evaluation tools
-│   ├── agent.py                                    # ADK Architecture: AllergyExtractorAgent & McDonaldsAllergenAgent
+│   ├── tools.py                                    # Typed tools with explicit parameter docstrings
+│   ├── memory.py                                   # SessionMemoryManager: persistent storage, history compaction & async background thread pool
+│   ├── agent.py                                    # Native LLM Tool Calling: AllergyExtractorAgent & McDonaldsAllergenAgent
 │   ├── telemetry.py                                # Structured trace telemetry
 │   ├── server.py                                   # Zero-dependency HTTP web server
 │   └── app.py                                      # FastAPI web server
@@ -44,18 +46,22 @@ simple-allgergen-ai-lab/
 │   ├── index.html                                  # Web UI layout
 │   ├── style.css                                   # Glassmorphism styling
 │   └── app.js                                      # Frontend logic & auto-sync UI toggles
-└── tests/                                          # Automated unit test suite (21 tests)
+└── tests/                                          # Automated unit test suite (24 tests)
 ```
 
 ---
 
 ## 🔑 Key Concepts & Data Flow
-1. **ADK Multi-Agent Architecture**:
+1. **Persistent Session Memory & History Compaction (`src/memory.py`)**:
+   - Saves session state to disk (`data/sessions/{session_id}.json`).
+   - History Compaction Engine compacts older turns into high-density executive context summaries when turn count exceeds thresholds.
+   - Non-blocking async background thread execution (`ThreadPoolExecutor`) for disk writes and compaction.
+2. **ADK Multi-Agent Architecture**:
    - `AllergyExtractorAgent`: ADK Sub-Agent powered by **Gemini Flash** (`gemini-2.5-flash`) that emits food allergy categories (`Gluten`, `Dairy`, `Nuts`) mentioned in prompt text.
-   - `McDonaldsAllergenAgent`: Primary orchestrator agent equipped with simple table data tools.
-2. **Simple Table Data Source**: All allergen information is read directly from `data/mcdonalds_allergens.json`.
-3. **Item & Category Evaluation**:
+   - `McDonaldsAllergenAgent`: Primary orchestrator agent with Native LLM Tool Calling (`tools=[...]`) and LLM-guided error recovery.
+3. **Simple Table Data Source**: All allergen information is read directly from `data/mcdonalds_allergens.json`.
+4. **Item & Category Evaluation**:
    - Specific items (e.g. *Big Mac*, *Egg McMuffin*, *Coca-Cola*) are evaluated in `evaluate_allergen_safety()`.
    - Generic terms (e.g. *burgers*, *shakes*, *breakfast*, *fries*, *drinks*) are mapped in `GENERIC_CATEGORY_MAP` and evaluated in `evaluate_category_safety()`.
-4. **Auto-Sync UI Toggles**: Emitted allergies automatically activate the corresponding UI buttons (`🌾 Gluten-Free`, `🥛 Dairy-Free`, `🥜 Nut-Free`).
-5. **Medical Disclaimer**: Every response includes an explicit disclaimer about fast-food shared prep areas and cross-contamination.
+5. **Auto-Sync UI Toggles**: Emitted allergies automatically activate the corresponding UI buttons (`🌾 Gluten-Free`, `🥛 Dairy-Free`, `🥜 Nut-Free`).
+6. **Medical Disclaimer**: Every response includes an explicit disclaimer about fast-food shared prep areas and cross-contamination.

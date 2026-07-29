@@ -1,8 +1,8 @@
 """
-McDonald's Allergen AI Agent Core Orchestration (Native LLM Function Calling)
------------------------------------------------------------------------------
-Implements Native LLM Function Calling using Google Gemini API (`google-genai` SDK)
-with explicit tool declarations, JSON parameter schemas, and LLM-guided error recovery.
+McDonald's Allergen AI Agent Core Orchestration (Native LLM Function Calling + Memory)
+---------------------------------------------------------------------------------------
+Implements Native LLM Function Calling using Google Gemini API (`google-genai` SDK),
+persistent session state, history compaction, and async background memory operations.
 """
 
 import os
@@ -19,6 +19,7 @@ from src.tools import (
     load_allergen_dataset,
     GENERIC_CATEGORY_MAP
 )
+from src.memory import memory_manager, SessionMemoryManager
 
 # Optional google-genai SDK import
 try:
@@ -103,7 +104,7 @@ class AllergyExtractorAgent:
 class AllergenAgent:
     """
     Main Orchestrator Agent featuring Native LLM Function Calling,
-    explicit JSON tool schemas, and LLM-guided error recovery.
+    persistent session memory, automated history compaction, and LLM-guided error recovery.
     """
 
     SYSTEM_INSTRUCTION = """
@@ -124,16 +125,24 @@ class AllergenAgent:
         self.data_path = data_path
         self.api_key = os.environ.get("GEMINI_API_KEY", "")
         self.extractor_subagent = AllergyExtractorAgent(api_key=self.api_key)
-        self.session_history: List[Dict[str, str]] = []
+        self.memory = memory_manager
 
-    def process_query(self, prompt: str, user_allergies: List[str]) -> Dict[str, Any]:
+    def process_query(
+        self,
+        prompt: str,
+        user_allergies: List[str],
+        session_id: str = "default_session"
+    ) -> Dict[str, Any]:
         """
-        Processes user query using Native LLM Function Calling loop:
-        1. Emits allergies via sub-agent.
-        2. Executes LLM tool calling loop with Gemini Flash (or offline tool dispatch).
-        3. Handles LLM-guided error recovery for unknown or ambiguous items.
+        Processes user query using Native LLM Function Calling & Persistent Memory loop:
+        1. Loads persistent session state & history compaction summary.
+        2. Emits allergies via sub-agent.
+        3. Executes LLM tool calling loop with Gemini Flash (or offline tool dispatch).
+        4. Appends turns to persistent session storage and triggers async background compaction.
         """
-        self.session_history.append({"role": "user", "content": prompt})
+        # Load persistent session state & compacted history summary
+        session_state = self.memory.load_session(session_id)
+        compacted_summary = session_state.get("compacted_summary", "")
 
         # 1. Extract allergies
         subagent_emitted_allergies = self.extractor_subagent.run(prompt)
@@ -142,25 +151,45 @@ class AllergenAgent:
         normalized_allergies = list(combined_set)
 
         # 2. Try Native LLM Function Calling if API key and SDK are available
+        result = None
         if self.api_key and HAS_GENAI_SDK:
             try:
-                llm_result = self._execute_native_llm_tool_loop(prompt, normalized_allergies)
-                if llm_result:
-                    llm_result["adk_subagent_emitted_allergies"] = subagent_emitted_allergies
-                    return llm_result
-            except Exception as e:
-                pass  # Fallback to local tool dispatch loop
+                result = self._execute_native_llm_tool_loop(prompt, normalized_allergies, compacted_summary)
+                if result:
+                    result["adk_subagent_emitted_allergies"] = subagent_emitted_allergies
+            except Exception:
+                pass
 
-        # 3. Local Tool Dispatch Loop (Ensures identical tool execution trajectory offline)
-        return self._execute_local_tool_loop(prompt, normalized_allergies, subagent_emitted_allergies)
+        # 3. Local Tool Dispatch Loop (if LLM SDK not available)
+        if not result:
+            result = self._execute_local_tool_loop(prompt, normalized_allergies, subagent_emitted_allergies)
 
-    def _execute_native_llm_tool_loop(self, prompt: str, normalized_allergies: List[str]) -> Optional[Dict[str, Any]]:
-        """Executes LLM Tool Calling loop with Gemini Flash."""
+        # 4. Asynchronously append turn, execute history compaction, and persist session to disk
+        self.memory.append_turn_and_compact(
+            session_id=session_id,
+            user_prompt=prompt,
+            assistant_response=result["response"],
+            allergies=normalized_allergies
+        )
+
+        result["session_id"] = session_id
+        result["compacted_summary"] = compacted_summary
+        return result
+
+    def _execute_native_llm_tool_loop(
+        self,
+        prompt: str,
+        normalized_allergies: List[str],
+        compacted_summary: str
+    ) -> Optional[Dict[str, Any]]:
+        """Executes LLM Tool Calling loop with Gemini Flash and compacted history."""
         client = genai.Client(api_key=self.api_key)
         tool_list = [evaluate_allergen_safety, evaluate_category_safety, lookup_item_allergens, search_safe_items]
 
-        # Call Gemini model with tools
-        chat_content = f"{self.SYSTEM_INSTRUCTION}\nUser Allergy Profile: {normalized_allergies}\nUser Query: \"{prompt}\""
+        # Inject compacted history summary if present
+        context_prefix = f"Compacted History Summary: {compacted_summary}\n\n" if compacted_summary else ""
+        chat_content = f"{self.SYSTEM_INSTRUCTION}\n{context_prefix}User Allergy Profile: {normalized_allergies}\nUser Query: \"{prompt}\""
+
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=chat_content,
@@ -170,7 +199,6 @@ class AllergenAgent:
             )
         )
 
-        # Check if LLM requested function calls
         if response.function_calls:
             function_call = response.function_calls[0]
             func_name = function_call.name
@@ -180,7 +208,6 @@ class AllergenAgent:
                 tool_fn = AVAILABLE_TOOLS[func_name]
                 tool_output = tool_fn(**func_args)
 
-                # Format LLM response
                 response_text = f"### {tool_output.get('safety_badge', 'ℹ️ VERDICT')}: {tool_output.get('item_name', prompt)}\n\n**Verdict**: {tool_output.get('verdict', '')}\n\n> **Medical Disclaimer**: McDonald's kitchens use shared prep areas. Cross-contact may occur."
 
                 return {
@@ -262,7 +289,7 @@ class AllergenAgent:
                 "disclaimer": "Warning: McDonald's kitchen operations involve shared preparation areas. Cross-contact may occur."
             }
 
-        # Step 4: LLM-Guided Error Recovery (Item unknown fallback)
+        # Step 4: Error Recovery Fallback
         response_text = f"❓ UNKNOWN ITEM: I couldn't identify a specific item or menu category in your query ('{prompt}'). Please try asking about specific items like 'Big Mac', 'Egg McMuffin', 'World Famous Fries', or generic menu categories like 'burgers', 'shakes', 'breakfast', or ask 'What can I eat?'."
         return {
             "prompt": prompt,
