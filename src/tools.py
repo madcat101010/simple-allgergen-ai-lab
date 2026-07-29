@@ -19,6 +19,44 @@ DEFAULT_DATA_PATH = os.path.join(
 # Global cache for allergen dataset
 _DATASET_CACHE: Optional[List[Dict[str, Any]]] = None
 
+# Category & generic keyword mapping dictionary
+GENERIC_CATEGORY_MAP = {
+    "burger": "Burgers",
+    "burgers": "Burgers",
+    "hamburger": "Burgers",
+    "hamburgers": "Burgers",
+    "cheeseburger": "Burgers",
+    "sandwich": "Burgers",
+    "sandwiches": "Burgers",
+    "chicken": "Chicken & Fish",
+    "nugget": "Chicken & Fish",
+    "nuggets": "Chicken & Fish",
+    "mcnuggets": "Chicken & Fish",
+    "fish": "Chicken & Fish",
+    "breakfast": "Breakfast",
+    "mcmuffin": "Breakfast",
+    "burrito": "Breakfast",
+    "fry": "Fries & Sides",
+    "fries": "Fries & Sides",
+    "sides": "Fries & Sides",
+    "side": "Fries & Sides",
+    "shake": "Sweets & Treats",
+    "shakes": "Sweets & Treats",
+    "milkshake": "Sweets & Treats",
+    "milkshakes": "Sweets & Treats",
+    "dessert": "Sweets & Treats",
+    "desserts": "Sweets & Treats",
+    "ice cream": "Sweets & Treats",
+    "mcflurry": "Sweets & Treats",
+    "pie": "Sweets & Treats",
+    "drink": "Drinks",
+    "drinks": "Drinks",
+    "soda": "Drinks",
+    "beverage": "Drinks",
+    "coffee": "Drinks",
+    "latte": "Drinks"
+}
+
 
 def load_allergen_dataset(data_path: str = DEFAULT_DATA_PATH) -> List[Dict[str, Any]]:
     """Loads the McDonald's simple allergen table file into memory."""
@@ -70,6 +108,55 @@ def lookup_item_allergens(item_name: str, data_path: str = DEFAULT_DATA_PATH) ->
         "found": False,
         "query": item_name,
         "message": f"Menu item '{item_name}' was not found in the McDonald's allergen table."
+    }
+
+
+def evaluate_category_safety(
+    category_or_generic: str,
+    user_allergies: List[str],
+    data_path: str = DEFAULT_DATA_PATH
+) -> Optional[Dict[str, Any]]:
+    """
+    Evaluates all items within a matched category or generic term (e.g., 'burgers', 'shakes', 'breakfast').
+    Returns structured safety results for each item in that category.
+    """
+    dataset = load_allergen_dataset(data_path)
+    clean_term = category_or_generic.strip().lower()
+
+    # Identify category name from GENERIC_CATEGORY_MAP or dataset categories
+    target_category = GENERIC_CATEGORY_MAP.get(clean_term)
+    if not target_category:
+        for item in dataset:
+            if clean_term in item["category"].lower():
+                target_category = item["category"]
+                break
+
+    if not target_category:
+        return None
+
+    # Filter items matching category
+    category_items = [item for item in dataset if item["category"].lower() == target_category.lower()]
+    if not category_items:
+        return None
+
+    evaluations = []
+    safe_count = 0
+    unsafe_count = 0
+
+    for item in category_items:
+        item_eval = evaluate_allergen_safety(item["name"], user_allergies, data_path)
+        evaluations.append(item_eval)
+        if item_eval["status"] == "SAFE":
+            safe_count += 1
+        elif item_eval["status"] == "UNSAFE":
+            unsafe_count += 1
+
+    return {
+        "category": target_category,
+        "total_items": len(category_items),
+        "safe_count": safe_count,
+        "unsafe_count": unsafe_count,
+        "evaluations": evaluations
     }
 
 
@@ -163,7 +250,6 @@ def evaluate_allergen_safety(
         safety_badge = "❌ UNSAFE"
         verdict = f"UNSAFE: {item['name']} contains {', '.join(matched_allergens)}."
     else:
-        # Cross-contamination warning check (e.g. shared fryers, kitchen prep)
         status = "SAFE"
         safety_badge = "✅ SAFE"
         verdict = f"SAFE: {item['name']} does not contain ingredients matching your specified allergies ({', '.join(user_allergies)})."

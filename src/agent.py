@@ -12,7 +12,9 @@ from src.tools import (
     lookup_item_allergens,
     search_safe_items,
     evaluate_allergen_safety,
-    load_allergen_dataset
+    evaluate_category_safety,
+    load_allergen_dataset,
+    GENERIC_CATEGORY_MAP
 )
 
 SYSTEM_PROMPT = """
@@ -39,7 +41,7 @@ class AllergenAgent:
     def process_query(self, prompt: str, user_allergies: List[str]) -> Dict[str, Any]:
         """
         Main orchestration loop:
-        1. Parses prompt for menu items or safety questions.
+        1. Parses prompt for menu items, generic categories, or safe recommendation requests.
         2. Executes allergen lookup & safety evaluation tools.
         3. Formulates a structured safety verdict response.
         """
@@ -49,6 +51,7 @@ class AllergenAgent:
         # Normalize user allergy profile
         normalized_allergies = [a.strip().title() for a in user_allergies if a.strip()]
         clean_prompt = prompt.lower()
+        words = clean_prompt.replace("?", "").replace("!", "").replace(",", "").split()
 
         # Load dataset
         dataset = load_allergen_dataset(self.data_path) if self.data_path else load_allergen_dataset()
@@ -60,16 +63,7 @@ class AllergenAgent:
                 matched_item = item["name"]
                 break
 
-        if not matched_item:
-            # Check individual key words against item lookup
-            words = [w for w in clean_prompt.split() if len(w) > 3 and w not in ["safe", "free", "allergies", "allergy"]]
-            for word in words:
-                lookup = lookup_item_allergens(word, data_path=self.data_path) if self.data_path else lookup_item_allergens(word)
-                if lookup["found"]:
-                    matched_item = lookup["item"]["name"]
-                    break
-
-        # 2. If a specific item was found, evaluate its allergen safety
+        # 2. If a specific item was found, evaluate its allergen safety directly
         if matched_item:
             evaluation = evaluate_allergen_safety(matched_item, normalized_allergies, data_path=self.data_path) if self.data_path else evaluate_allergen_safety(matched_item, normalized_allergies)
             response_text = self._format_evaluation_response(evaluation)
@@ -86,7 +80,26 @@ class AllergenAgent:
             self.session_history.append({"role": "assistant", "content": response_text})
             return result
 
-        # 3. If no specific item, check if user is asking for safe options/recommendations
+        # 3. Check if the query contains generic category terms (e.g., 'burger', 'burgers', 'shake', 'milkshake', 'breakfast')
+        for word in words:
+            if word in GENERIC_CATEGORY_MAP:
+                cat_eval = evaluate_category_safety(word, normalized_allergies, data_path=self.data_path) if self.data_path else evaluate_category_safety(word, normalized_allergies)
+                if cat_eval:
+                    response_text = self._format_category_response(cat_eval, normalized_allergies)
+                    badge = "✅ SAFE CATEGORY" if cat_eval["unsafe_count"] == 0 else "ℹ️ CATEGORY BREAKDOWN"
+                    result = {
+                        "prompt": prompt,
+                        "user_allergies": normalized_allergies,
+                        "status": "CATEGORY",
+                        "safety_badge": badge,
+                        "response": response_text,
+                        "category_details": cat_eval,
+                        "disclaimer": "Warning: McDonald's kitchen operations involve shared preparation areas. Cross-contact may occur."
+                    }
+                    self.session_history.append({"role": "assistant", "content": response_text})
+                    return result
+
+        # 4. Check if user is asking for safe options/recommendations in general
         if "safe" in clean_prompt or "what can i eat" in clean_prompt or "recommend" in clean_prompt or "options" in clean_prompt:
             safe_items = search_safe_items(normalized_allergies, data_path=self.data_path) if self.data_path else search_safe_items(normalized_allergies)
             response_text = self._format_safe_items_response(safe_items, normalized_allergies)
@@ -103,8 +116,8 @@ class AllergenAgent:
             self.session_history.append({"role": "assistant", "content": response_text})
             return result
 
-        # 4. Fallback when query item is unknown
-        response_text = f"❓ UNKNOWN ITEM: I couldn't identify a specific McDonald's menu item in your query ('{prompt}'). Please specify items such as 'Big Mac', 'Egg McMuffin', 'French Fries', or ask 'What can I eat?'."
+        # 5. Fallback when query item or term is unknown
+        response_text = f"❓ UNKNOWN ITEM: I couldn't identify a specific item or menu category in your query ('{prompt}'). Please try asking about specific items like 'Big Mac', 'Egg McMuffin', 'World Famous Fries', or generic menu categories like 'burgers', 'shakes', 'breakfast', or ask 'What can I eat?'."
         result = {
             "prompt": prompt,
             "user_allergies": normalized_allergies,
@@ -133,6 +146,24 @@ class AllergenAgent:
 **Allergens Present**: {all_allergens}  
 
 > **Medical Disclaimer**: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur during prep."""
+
+    def _format_category_response(self, cat_data: Dict[str, Any], user_allergies: List[str]) -> str:
+        category = cat_data["category"]
+        allergies_str = ", ".join(user_allergies) or "None specified"
+        lines = [f"### 📋 Category Safety Breakdown: **{category}**"]
+        lines.append(f"**Allergy Profile Evaluated**: {allergies_str}\n")
+
+        for item in cat_data["evaluations"]:
+            badge = item["safety_badge"]
+            name = item["item_name"]
+            matched = ", ".join(item["matched_allergens"])
+            if item["status"] == "SAFE":
+                lines.append(f"- {badge} **{name}**: Safe for your profile.")
+            else:
+                lines.append(f"- {badge} **{name}**: Contains {matched}.")
+
+        lines.append("\n> **Medical Disclaimer**: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur during prep.")
+        return "\n".join(lines)
 
     def _format_safe_items_response(self, safe_items: List[Dict[str, Any]], user_allergies: List[str]) -> str:
         allergies_str = ", ".join(user_allergies) or "None specified"
