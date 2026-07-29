@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment Variables
+.env
+
+# PDF Files
+*.pdf
+
+# IDE & OS
+.DS_Store
+.vscode/
+.idea/
+
+# App & Local Scratch
+scratch/
+*.log
+allergen_agent_implementation_plan.md
+
