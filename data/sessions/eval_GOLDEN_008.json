@@ -7,16 +7,6 @@
     {
       "role": "user",
       "content": "Are milkshakes safe for me?",
-      "timestamp": 1785349501.261485
-    },
-    {
-      "role": "assistant",
-      "content": "### \ud83d\udccb Category Safety Breakdown: **Sweets & Treats**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Vanilla Cone**: Contains Dairy / Milk.\n- \u2705 SAFE **Baked Apple Pie**: Safe for your profile.\n- \u274c UNSAFE **McFlurry with OREO Cookies**: Contains Dairy / Milk.\n- \u274c UNSAFE **McFlurry with M&M'S Candies**: Contains Dairy / Milk.\n\n> **Medical Disclaimer**: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur during prep.",
-      "timestamp": 1785349501.261485
-    },
-    {
-      "role": "user",
-      "content": "Are milkshakes safe for me?",
       "timestamp": 1785349616.691614
     },
     {
@@ -33,8 +23,18 @@
       "role": "assistant",
       "content": "### \ud83d\udccb Category Safety Breakdown: **Sweets & Treats**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Vanilla Cone**: Contains Dairy / Milk.\n- \u2705 SAFE **Baked Apple Pie**: Safe for your profile.\n- \u274c UNSAFE **McFlurry with OREO Cookies**: Contains Dairy / Milk.\n- \u274c UNSAFE **McFlurry with M&M'S Candies**: Contains Dairy / Milk.\n\n> **Medical Disclaimer**: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur during prep.",
       "timestamp": 1785349755.581861
+    },
+    {
+      "role": "user",
+      "content": "Are milkshakes safe for me?",
+      "timestamp": 1785349938.949294
+    },
+    {
+      "role": "assistant",
+      "content": "### \ud83d\udccb Category Safety Breakdown: **Sweets & Treats**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Vanilla Cone**: Contains Dairy / Milk.\n- \u2705 SAFE **Baked Apple Pie**: Safe for your profile.\n- \u274c UNSAFE **McFlurry with OREO Cookies**: Contains Dairy / Milk.\n- \u274c UNSAFE **McFlurry with M&M'S Candies**: Contains Dairy / Milk.\n\n> **Medical Disclaimer**: McDonald's kitchen operations involve shared preparation areas, fryers, and equipment. Cross-contact may occur during prep.",
+      "timestamp": 1785349938.949294
     }
   ],
-  "compacted_summary": "Prior Context: USER: Are milkshakes safe for me? | ASSISTANT: ### \ud83d\udccb Category Safety Breakdown: **Sweets & Treats**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Vanilla Cone**:  || Prior Context: USER: Are milkshakes safe for me? | ASSISTANT: ### \ud83d\udccb Category Safety Breakdown: **Sweets & Treats**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Vanilla Cone**:  || Prior Context: USER: Are milkshakes safe for me? | ASSISTANT: ### \ud83d\udccb Category Safety Breakdown: **Sweets & Treats**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Vanilla Cone**: ",
-  "last_updated": "2026-07-29 14:29:15"
+  "compacted_summary": "Prior Context: USER: Are milkshakes safe for me? | ASSISTANT: ### \ud83d\udccb Category Safety Breakdown: **Sweets & Treats**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Vanilla Cone**:  || Prior Context: USER: Are milkshakes safe for me? | ASSISTANT: ### \ud83d\udccb Category Safety Breakdown: **Sweets & Treats**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Vanilla Cone**:  || Prior Context: USER: Are milkshakes safe for me? | ASSISTANT: ### \ud83d\udccb Category Safety Breakdown: **Sweets & Treats**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Vanilla Cone**:  || Prior Context: USER: Are milkshakes safe for me? | ASSISTANT: ### \ud83d\udccb Category Safety Breakdown: **Sweets & Treats**\n**Allergy Profile Evaluated**: Dairy\n\n- \u274c UNSAFE **Vanilla Cone**: ",
+  "last_updated": "2026-07-29 14:32:18"
 }
